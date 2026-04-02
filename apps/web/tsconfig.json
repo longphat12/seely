@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@prisma-client": ["../../prisma/generated-client"],
+      "@prisma-client/*": ["../../prisma/generated-client/*"]
     }
   },
   "include": [
@@ -28,7 +30,9 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    "../../prisma/generated-client/**/*.ts",
+    "../../prisma/generated-client/index.d.ts"
   ],
   "exclude": ["node_modules"]
 }

@@ -1,7 +1,7 @@
 import { prisma } from '../../prisma'
 import { runAudit } from '@seely/seo-rules'
 import type { AuditPayload } from '@seely/seo-types'
-import type { Prisma } from '@prisma/client'
+import type { Prisma } from '@prisma-client'
 import { findOrCreateByDomain } from './project.service'
 import { findOrCreatePage } from './page.service'
 

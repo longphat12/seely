@@ -1,4 +1,4 @@
-import { PrismaClient, Severity, IssueStatus, AuditSource } from '@prisma/client'
+import { PrismaClient, Severity, IssueStatus, AuditSource } from './generated-client'
 
 const prisma = new PrismaClient()
 

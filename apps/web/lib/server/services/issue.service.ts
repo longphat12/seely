@@ -1,5 +1,5 @@
 import { prisma } from '../../prisma'
-import type { IssueStatus } from '@prisma/client'
+import type { IssueStatus } from '@prisma-client'
 
 export async function listIssuesByAudit(auditId: string) {
   return prisma.issue.findMany({
