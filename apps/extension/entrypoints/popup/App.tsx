@@ -246,7 +246,7 @@ function App() {
         </header>
         <div className="center">
           <div className="success">✅ Đã lưu báo cáo!</div>
-          <button className="btn btn-secondary" onClick={() => window.open(`http://localhost:3000/audits/${savedAuditId}`)}>
+          <button className="btn btn-secondary" onClick={() => window.open(`${import.meta.env.WXT_EXTENSION_API_BASE_URL}/audits/${savedAuditId}`)}>
             Xem trên Dashboard
           </button>
           <button className="btn btn-primary" onClick={handleScan}>Quét lại</button>
@@ -323,7 +323,7 @@ function App() {
       <div className="actions">
         <button className="btn btn-primary" onClick={handleSave}>💾 Lưu báo cáo</button>
         <button className="btn btn-secondary" onClick={handleScan}>🔄 Quét lại</button>
-        <button className="btn btn-ghost" onClick={() => window.open('http://localhost:3000/projects')}>
+        <button className="btn btn-ghost" onClick={() => window.open(`${import.meta.env.WXT_EXTENSION_API_BASE_URL}/projects`)}>
           📊 Bảng phân tích
         </button>
       </div>
