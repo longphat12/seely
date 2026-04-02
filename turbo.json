@@ -8,6 +8,7 @@
     },
     "build": {
       "dependsOn": ["^build"],
+      "env": ["DATABASE_URL", "JWT_SECRET", "JWT_EXPIRES_IN", "PORT", "CORS_ORIGIN", "EXTENSION_API_BASE_URL", "NODE_ENV"],
       "outputs": [".next/**", "dist/**", ".output/**"]
     },
     "lint": {
