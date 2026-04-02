@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Audit"
+ADD COLUMN "socialScore" INTEGER NOT NULL DEFAULT 0;

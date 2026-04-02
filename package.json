@@ -4,13 +4,13 @@
   "packageManager": "pnpm@9.15.9",
   "scripts": {
     "postinstall": "prisma generate",
-    "dev": "turbo dev",
-    "dev:web": "turbo dev --filter=@seely/web",
-    "dev:ext": "turbo dev --filter=@seely/extension",
-    "build": "turbo build",
-    "lint": "turbo lint",
-    "test": "turbo test",
-    "typecheck": "turbo typecheck",
+    "dev": "pnpm dlx turbo dev",
+    "dev:web": "pnpm dlx turbo dev --filter=@seely/web",
+    "dev:ext": "pnpm dlx turbo dev --filter=@seely/extension",
+    "build": "pnpm dlx turbo build",
+    "lint": "pnpm dlx turbo lint",
+    "test": "pnpm dlx turbo test",
+    "typecheck": "pnpm dlx turbo typecheck",
     "db:up": "docker compose -f infra/docker/docker-compose.yml up -d",
     "db:down": "docker compose -f infra/docker/docker-compose.yml down",
     "db:logs": "docker compose -f infra/docker/docker-compose.yml logs -f postgres",
@@ -21,6 +21,7 @@
     "prisma:studio": "prisma studio"
   },
   "devDependencies": {
+    "@prisma/engines": "^6.19.3",
     "prisma": "^6.5.0",
     "tsx": "^4.19.0",
     "turbo": "^2.5.0",
@@ -30,6 +31,10 @@
     "@prisma/client": "^6.19.3"
   },
   "pnpm": {
+    "supportedArchitectures": {
+      "os": ["darwin", "linux"],
+      "cpu": ["arm64", "x64"]
+    },
     "onlyBuiltDependencies": [
       "@prisma/engines",
       "argon2",
@@ -37,7 +42,8 @@
       "prisma",
       "sharp",
       "spawn-sync",
-      "unrs-resolver"
+      "unrs-resolver",
+      "turbo"
     ]
   }
 }
