@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 const severityEnum = z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'])
-const categoryEnum = z.enum(['ON_PAGE', 'TECHNICAL', 'CONTENT', 'PERFORMANCE'])
+const categoryEnum = z.enum(['ON_PAGE', 'TECHNICAL', 'CONTENT', 'PERFORMANCE', 'SOCIAL'])
 
 const extractedSeoDataSchema = z.object({
   url: z.string().url(),
@@ -46,6 +46,7 @@ const scoreBreakdownSchema = z.object({
   technical: z.number().int().min(0).max(100),
   content: z.number().int().min(0).max(100),
   performance: z.number().int().min(0).max(100),
+  social: z.number().int().min(0).max(100),
 })
 
 export const auditPayloadSchema = z.object({
