@@ -1,11 +1,3 @@
 packages:
   - './apps/*'
   - './packages/*'
-onlyBuiltDependencies:
-  - '@prisma/engines'
-  - argon2
-  - esbuild
-  - prisma
-  - sharp
-  - spawn-sync
-  - unrs-resolver

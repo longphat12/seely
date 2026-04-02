@@ -1,7 +1,7 @@
 {
   "name": "seely",
   "private": true,
-  "packageManager": "pnpm@10.6.5",
+  "packageManager": "pnpm@9.15.9",
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "turbo dev",
@@ -28,5 +28,16 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/engines",
+      "argon2",
+      "esbuild",
+      "prisma",
+      "sharp",
+      "spawn-sync",
+      "unrs-resolver"
+    ]
   }
 }
