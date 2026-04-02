@@ -14,6 +14,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navItems = [
     { href: '/projects', label: 'Dự án', icon: '📁' },
+    { href: '/debug-sharing', label: 'Kiểm tra chia sẻ', icon: '🔗' },
   ]
 
   return (
