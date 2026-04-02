@@ -2,10 +2,11 @@ import type { SeoIssue, SeoScoreBreakdown, IssueCategory, Severity } from '@seel
 
 /** Category weight configuration */
 const CATEGORY_WEIGHTS: Record<IssueCategory, number> = {
-  ON_PAGE: 35,
-  TECHNICAL: 25,
-  CONTENT: 20,
-  PERFORMANCE: 20,
+  ON_PAGE: 30,
+  TECHNICAL: 20,
+  CONTENT: 15,
+  PERFORMANCE: 15,
+  SOCIAL: 20,
 }
 
 /** Penalty per severity level */
@@ -32,6 +33,7 @@ export function calculateScore(issues: SeoIssue[]): SeoScoreBreakdown {
     TECHNICAL: 0,
     CONTENT: 0,
     PERFORMANCE: 0,
+    SOCIAL: 0,
   }
 
   // Sum penalties per category
@@ -48,6 +50,7 @@ export function calculateScore(issues: SeoIssue[]): SeoScoreBreakdown {
     TECHNICAL: Math.max(0, CATEGORY_WEIGHTS.TECHNICAL - categoryPenalties.TECHNICAL),
     CONTENT: Math.max(0, CATEGORY_WEIGHTS.CONTENT - categoryPenalties.CONTENT),
     PERFORMANCE: Math.max(0, CATEGORY_WEIGHTS.PERFORMANCE - categoryPenalties.PERFORMANCE),
+    SOCIAL: Math.max(0, CATEGORY_WEIGHTS.SOCIAL - categoryPenalties.SOCIAL),
   }
 
   // Normalize to 0–100 scale
@@ -58,6 +61,7 @@ export function calculateScore(issues: SeoIssue[]): SeoScoreBreakdown {
   const technical = normalize(rawScores.TECHNICAL, CATEGORY_WEIGHTS.TECHNICAL)
   const content = normalize(rawScores.CONTENT, CATEGORY_WEIGHTS.CONTENT)
   const performance = normalize(rawScores.PERFORMANCE, CATEGORY_WEIGHTS.PERFORMANCE)
+  const social = normalize(rawScores.SOCIAL, CATEGORY_WEIGHTS.SOCIAL)
 
   // Weighted average for overall
   const overall = Math.round(
@@ -65,9 +69,10 @@ export function calculateScore(issues: SeoIssue[]): SeoScoreBreakdown {
       (onPage * CATEGORY_WEIGHTS.ON_PAGE +
         technical * CATEGORY_WEIGHTS.TECHNICAL +
         content * CATEGORY_WEIGHTS.CONTENT +
-        performance * CATEGORY_WEIGHTS.PERFORMANCE) / 100
+        performance * CATEGORY_WEIGHTS.PERFORMANCE +
+        social * CATEGORY_WEIGHTS.SOCIAL) / 100
     ))
   )
 
-  return { overall, onPage, technical, content, performance }
+  return { overall, onPage, technical, content, performance, social }
 }

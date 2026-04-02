@@ -9,7 +9,8 @@ interface Metrics {
   h2Count: number | null; imagesTotal: number | null; imagesWithoutAlt: number | null;
   wordCount: number | null; domNodeCount: number | null; hasCanonical: boolean | null;
   hasViewport: boolean | null; hasSchema: boolean | null;
-  openGraphPresent: boolean | null; twitterCardPresent: boolean | null
+  openGraphPresent: boolean | null; twitterCardPresent: boolean | null;
+  ogImage: string | null; metaDescription: string | null;
 }
 
 interface Issue {
@@ -20,6 +21,7 @@ interface Issue {
 interface AuditDetail {
   id: string; url: string; title: string | null; overallScore: number;
   onPageScore: number; technicalScore: number; contentScore: number; performanceScore: number;
+  socialScore: number;
   source: string; createdAt: string; metrics: Metrics | null; issues: Issue[]
 }
 
@@ -64,6 +66,7 @@ export default function AuditPage() {
           { label: 'Technical', score: audit.technicalScore },
           { label: 'Content', score: audit.contentScore },
           { label: 'Performance', score: audit.performanceScore },
+          { label: 'Social', score: audit.socialScore },
         ].map((item) => (
           <div className="kpi-card" key={item.label}>
             <div className="kpi-label">{item.label}</div>
@@ -100,6 +103,38 @@ export default function AuditPage() {
           </div>
         </div>
       )}
+
+      {/* Zalo Preview */}
+      <div className="card" style={{ marginBottom: 24, background: 'linear-gradient(135deg, #0068ff 0%, #0056d2 100%)', color: 'white', border: 'none' }}>
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center' }}>
+          <span style={{ marginRight: 8 }}>📱</span> Zalo Sharing Preview
+        </h3>
+        <div style={{ background: 'white', borderRadius: 12, overflow: 'hidden', maxWidth: 500, boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+          <div style={{ width: '100%', height: 260, background: '#f0f2f5', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            {audit.metrics?.ogImage ? (
+              <img src={audit.metrics.ogImage} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <div style={{ color: '#8e8e8e', textAlign: 'center', padding: 20 }}>
+                <div style={{ fontSize: 40, marginBottom: 8 }}>🖼️</div>
+                <div>No Preview Image Found</div>
+              </div>
+            )}
+          </div>
+          <div style={{ padding: '12px 16px', color: '#1c1e21' }}>
+            <div style={{ fontSize: 12, color: '#65676b', marginBottom: 2, textTransform: 'uppercase', fontWeight: 600 }}>{new URL(audit.url).hostname}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, lineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+              {audit.title || 'No Title Provided'}
+            </div>
+            <div style={{ fontSize: 14, color: '#65676b', lineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+              {audit.metrics?.metaDescription || 'No description provided for this page. Zalo will show the page URL or a snippet of text from the content.'}
+            </div>
+          </div>
+        </div>
+        <p style={{ marginTop: 16, fontSize: 13, opacity: 0.9 }}>
+          💡 <strong>Tip:</strong> Zalo favors images with a 1.91:1 ratio (e.g., 1200x630px). 
+          Ensure your image is hosted on an absolute URL and is publicly accessible.
+        </p>
+      </div>
 
       {/* Issues by Category */}
       {Object.entries(grouped).map(([category, issues]) => (

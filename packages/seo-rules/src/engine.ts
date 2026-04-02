@@ -15,8 +15,9 @@ import {
 
 import { ruleImagesAltMissing, ruleWordCountLow } from './rules/content'
 import { ruleDomTooLarge } from './rules/performance'
+import { socialRules } from './rules/social'
 
-/** All 18 MVP rules in execution order */
+/** All MVP rules in execution order (total 19 now) */
 export const ALL_RULES: SeoRuleFn[] = [
   // ON_PAGE (9 rules)
   ruleTitleMissing,
@@ -40,6 +41,8 @@ export const ALL_RULES: SeoRuleFn[] = [
   ruleWordCountLow,
   // PERFORMANCE (1 rule)
   ruleDomTooLarge,
+  // SOCIAL (1 rule - Zalo)
+  socialRules,
 ]
 
 export interface AuditResult {

@@ -93,6 +93,7 @@ model Audit {
   technicalScore   Int
   contentScore     Int
   performanceScore Int
+  socialScore      Int         @default(0)
   createdAt        DateTime    @default(now())
 
   project  Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)

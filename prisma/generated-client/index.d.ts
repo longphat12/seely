@@ -6201,6 +6201,7 @@ export namespace Prisma {
     technicalScore: number | null
     contentScore: number | null
     performanceScore: number | null
+    socialScore: number | null
   }
 
   export type AuditSumAggregateOutputType = {
@@ -6209,6 +6210,7 @@ export namespace Prisma {
     technicalScore: number | null
     contentScore: number | null
     performanceScore: number | null
+    socialScore: number | null
   }
 
   export type AuditMinAggregateOutputType = {
@@ -6223,6 +6225,7 @@ export namespace Prisma {
     technicalScore: number | null
     contentScore: number | null
     performanceScore: number | null
+    socialScore: number | null
     createdAt: Date | null
   }
 
@@ -6238,6 +6241,7 @@ export namespace Prisma {
     technicalScore: number | null
     contentScore: number | null
     performanceScore: number | null
+    socialScore: number | null
     createdAt: Date | null
   }
 
@@ -6253,6 +6257,7 @@ export namespace Prisma {
     technicalScore: number
     contentScore: number
     performanceScore: number
+    socialScore: number
     createdAt: number
     _all: number
   }
@@ -6264,6 +6269,7 @@ export namespace Prisma {
     technicalScore?: true
     contentScore?: true
     performanceScore?: true
+    socialScore?: true
   }
 
   export type AuditSumAggregateInputType = {
@@ -6272,6 +6278,7 @@ export namespace Prisma {
     technicalScore?: true
     contentScore?: true
     performanceScore?: true
+    socialScore?: true
   }
 
   export type AuditMinAggregateInputType = {
@@ -6286,6 +6293,7 @@ export namespace Prisma {
     technicalScore?: true
     contentScore?: true
     performanceScore?: true
+    socialScore?: true
     createdAt?: true
   }
 
@@ -6301,6 +6309,7 @@ export namespace Prisma {
     technicalScore?: true
     contentScore?: true
     performanceScore?: true
+    socialScore?: true
     createdAt?: true
   }
 
@@ -6316,6 +6325,7 @@ export namespace Prisma {
     technicalScore?: true
     contentScore?: true
     performanceScore?: true
+    socialScore?: true
     createdAt?: true
     _all?: true
   }
@@ -6418,6 +6428,7 @@ export namespace Prisma {
     technicalScore: number
     contentScore: number
     performanceScore: number
+    socialScore: number
     createdAt: Date
     _count: AuditCountAggregateOutputType | null
     _avg: AuditAvgAggregateOutputType | null
@@ -6452,6 +6463,7 @@ export namespace Prisma {
     technicalScore?: boolean
     contentScore?: boolean
     performanceScore?: boolean
+    socialScore?: boolean
     createdAt?: boolean
     project?: boolean | ProjectDefaultArgs<ExtArgs>
     page?: boolean | Audit$pageArgs<ExtArgs>
@@ -6473,6 +6485,7 @@ export namespace Prisma {
     technicalScore?: boolean
     contentScore?: boolean
     performanceScore?: boolean
+    socialScore?: boolean
     createdAt?: boolean
     project?: boolean | ProjectDefaultArgs<ExtArgs>
     page?: boolean | Audit$pageArgs<ExtArgs>
@@ -6490,6 +6503,7 @@ export namespace Prisma {
     technicalScore?: boolean
     contentScore?: boolean
     performanceScore?: boolean
+    socialScore?: boolean
     createdAt?: boolean
     project?: boolean | ProjectDefaultArgs<ExtArgs>
     page?: boolean | Audit$pageArgs<ExtArgs>
@@ -6507,10 +6521,11 @@ export namespace Prisma {
     technicalScore?: boolean
     contentScore?: boolean
     performanceScore?: boolean
+    socialScore?: boolean
     createdAt?: boolean
   }
 
-  export type AuditOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "projectId" | "pageId" | "source" | "url" | "title" | "overallScore" | "onPageScore" | "technicalScore" | "contentScore" | "performanceScore" | "createdAt", ExtArgs["result"]["audit"]>
+  export type AuditOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "projectId" | "pageId" | "source" | "url" | "title" | "overallScore" | "onPageScore" | "technicalScore" | "contentScore" | "performanceScore" | "socialScore" | "createdAt", ExtArgs["result"]["audit"]>
   export type AuditInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     project?: boolean | ProjectDefaultArgs<ExtArgs>
     page?: boolean | Audit$pageArgs<ExtArgs>
@@ -6549,6 +6564,7 @@ export namespace Prisma {
       technicalScore: number
       contentScore: number
       performanceScore: number
+      socialScore: number
       createdAt: Date
     }, ExtArgs["result"]["audit"]>
     composites: {}
@@ -6989,6 +7005,7 @@ export namespace Prisma {
     readonly technicalScore: FieldRef<"Audit", 'Int'>
     readonly contentScore: FieldRef<"Audit", 'Int'>
     readonly performanceScore: FieldRef<"Audit", 'Int'>
+    readonly socialScore: FieldRef<"Audit", 'Int'>
     readonly createdAt: FieldRef<"Audit", 'DateTime'>
   }
     
@@ -12283,6 +12300,7 @@ export namespace Prisma {
     technicalScore: 'technicalScore',
     contentScore: 'contentScore',
     performanceScore: 'performanceScore',
+    socialScore: 'socialScore',
     createdAt: 'createdAt'
   };
 
@@ -12797,6 +12815,7 @@ export namespace Prisma {
     technicalScore?: IntFilter<"Audit"> | number
     contentScore?: IntFilter<"Audit"> | number
     performanceScore?: IntFilter<"Audit"> | number
+    socialScore?: IntFilter<"Audit"> | number
     createdAt?: DateTimeFilter<"Audit"> | Date | string
     project?: XOR<ProjectScalarRelationFilter, ProjectWhereInput>
     page?: XOR<PageNullableScalarRelationFilter, PageWhereInput> | null
@@ -12817,6 +12836,7 @@ export namespace Prisma {
     technicalScore?: SortOrder
     contentScore?: SortOrder
     performanceScore?: SortOrder
+    socialScore?: SortOrder
     createdAt?: SortOrder
     project?: ProjectOrderByWithRelationInput
     page?: PageOrderByWithRelationInput
@@ -12840,6 +12860,7 @@ export namespace Prisma {
     technicalScore?: IntFilter<"Audit"> | number
     contentScore?: IntFilter<"Audit"> | number
     performanceScore?: IntFilter<"Audit"> | number
+    socialScore?: IntFilter<"Audit"> | number
     createdAt?: DateTimeFilter<"Audit"> | Date | string
     project?: XOR<ProjectScalarRelationFilter, ProjectWhereInput>
     page?: XOR<PageNullableScalarRelationFilter, PageWhereInput> | null
@@ -12860,6 +12881,7 @@ export namespace Prisma {
     technicalScore?: SortOrder
     contentScore?: SortOrder
     performanceScore?: SortOrder
+    socialScore?: SortOrder
     createdAt?: SortOrder
     _count?: AuditCountOrderByAggregateInput
     _avg?: AuditAvgOrderByAggregateInput
@@ -12883,6 +12905,7 @@ export namespace Prisma {
     technicalScore?: IntWithAggregatesFilter<"Audit"> | number
     contentScore?: IntWithAggregatesFilter<"Audit"> | number
     performanceScore?: IntWithAggregatesFilter<"Audit"> | number
+    socialScore?: IntWithAggregatesFilter<"Audit"> | number
     createdAt?: DateTimeWithAggregatesFilter<"Audit"> | Date | string
   }
 
@@ -13526,6 +13549,7 @@ export namespace Prisma {
     technicalScore: number
     contentScore: number
     performanceScore: number
+    socialScore?: number
     createdAt?: Date | string
     project: ProjectCreateNestedOneWithoutAuditsInput
     page?: PageCreateNestedOneWithoutAuditsInput
@@ -13546,6 +13570,7 @@ export namespace Prisma {
     technicalScore: number
     contentScore: number
     performanceScore: number
+    socialScore?: number
     createdAt?: Date | string
     metrics?: AuditMetricsUncheckedCreateNestedOneWithoutAuditInput
     issues?: IssueUncheckedCreateNestedManyWithoutAuditInput
@@ -13562,6 +13587,7 @@ export namespace Prisma {
     technicalScore?: IntFieldUpdateOperationsInput | number
     contentScore?: IntFieldUpdateOperationsInput | number
     performanceScore?: IntFieldUpdateOperationsInput | number
+    socialScore?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     project?: ProjectUpdateOneRequiredWithoutAuditsNestedInput
     page?: PageUpdateOneWithoutAuditsNestedInput
@@ -13582,6 +13608,7 @@ export namespace Prisma {
     technicalScore?: IntFieldUpdateOperationsInput | number
     contentScore?: IntFieldUpdateOperationsInput | number
     performanceScore?: IntFieldUpdateOperationsInput | number
+    socialScore?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     metrics?: AuditMetricsUncheckedUpdateOneWithoutAuditNestedInput
     issues?: IssueUncheckedUpdateManyWithoutAuditNestedInput
@@ -13600,6 +13627,7 @@ export namespace Prisma {
     technicalScore: number
     contentScore: number
     performanceScore: number
+    socialScore?: number
     createdAt?: Date | string
   }
 
@@ -13613,6 +13641,7 @@ export namespace Prisma {
     technicalScore?: IntFieldUpdateOperationsInput | number
     contentScore?: IntFieldUpdateOperationsInput | number
     performanceScore?: IntFieldUpdateOperationsInput | number
+    socialScore?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -13628,6 +13657,7 @@ export namespace Prisma {
     technicalScore?: IntFieldUpdateOperationsInput | number
     contentScore?: IntFieldUpdateOperationsInput | number
     performanceScore?: IntFieldUpdateOperationsInput | number
+    socialScore?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -14368,6 +14398,7 @@ export namespace Prisma {
     technicalScore?: SortOrder
     contentScore?: SortOrder
     performanceScore?: SortOrder
+    socialScore?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -14377,6 +14408,7 @@ export namespace Prisma {
     technicalScore?: SortOrder
     contentScore?: SortOrder
     performanceScore?: SortOrder
+    socialScore?: SortOrder
   }
 
   export type AuditMaxOrderByAggregateInput = {
@@ -14391,6 +14423,7 @@ export namespace Prisma {
     technicalScore?: SortOrder
     contentScore?: SortOrder
     performanceScore?: SortOrder
+    socialScore?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -14406,6 +14439,7 @@ export namespace Prisma {
     technicalScore?: SortOrder
     contentScore?: SortOrder
     performanceScore?: SortOrder
+    socialScore?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -14415,6 +14449,7 @@ export namespace Prisma {
     technicalScore?: SortOrder
     contentScore?: SortOrder
     performanceScore?: SortOrder
+    socialScore?: SortOrder
   }
 
   export type EnumAuditSourceWithAggregatesFilter<$PrismaModel = never> = {
@@ -15779,6 +15814,7 @@ export namespace Prisma {
     technicalScore: number
     contentScore: number
     performanceScore: number
+    socialScore?: number
     createdAt?: Date | string
     page?: PageCreateNestedOneWithoutAuditsInput
     metrics?: AuditMetricsCreateNestedOneWithoutAuditInput
@@ -15797,6 +15833,7 @@ export namespace Prisma {
     technicalScore: number
     contentScore: number
     performanceScore: number
+    socialScore?: number
     createdAt?: Date | string
     metrics?: AuditMetricsUncheckedCreateNestedOneWithoutAuditInput
     issues?: IssueUncheckedCreateNestedManyWithoutAuditInput
@@ -15896,6 +15933,7 @@ export namespace Prisma {
     technicalScore?: IntFilter<"Audit"> | number
     contentScore?: IntFilter<"Audit"> | number
     performanceScore?: IntFilter<"Audit"> | number
+    socialScore?: IntFilter<"Audit"> | number
     createdAt?: DateTimeFilter<"Audit"> | Date | string
   }
 
@@ -16058,6 +16096,7 @@ export namespace Prisma {
     technicalScore: number
     contentScore: number
     performanceScore: number
+    socialScore?: number
     createdAt?: Date | string
     project: ProjectCreateNestedOneWithoutAuditsInput
     metrics?: AuditMetricsCreateNestedOneWithoutAuditInput
@@ -16076,6 +16115,7 @@ export namespace Prisma {
     technicalScore: number
     contentScore: number
     performanceScore: number
+    socialScore?: number
     createdAt?: Date | string
     metrics?: AuditMetricsUncheckedCreateNestedOneWithoutAuditInput
     issues?: IssueUncheckedCreateNestedManyWithoutAuditInput
@@ -16506,6 +16546,7 @@ export namespace Prisma {
     technicalScore: number
     contentScore: number
     performanceScore: number
+    socialScore?: number
     createdAt?: Date | string
     project: ProjectCreateNestedOneWithoutAuditsInput
     page?: PageCreateNestedOneWithoutAuditsInput
@@ -16525,6 +16566,7 @@ export namespace Prisma {
     technicalScore: number
     contentScore: number
     performanceScore: number
+    socialScore?: number
     createdAt?: Date | string
     issues?: IssueUncheckedCreateNestedManyWithoutAuditInput
     snapshot?: AuditSnapshotUncheckedCreateNestedOneWithoutAuditInput
@@ -16556,6 +16598,7 @@ export namespace Prisma {
     technicalScore?: IntFieldUpdateOperationsInput | number
     contentScore?: IntFieldUpdateOperationsInput | number
     performanceScore?: IntFieldUpdateOperationsInput | number
+    socialScore?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     project?: ProjectUpdateOneRequiredWithoutAuditsNestedInput
     page?: PageUpdateOneWithoutAuditsNestedInput
@@ -16575,6 +16618,7 @@ export namespace Prisma {
     technicalScore?: IntFieldUpdateOperationsInput | number
     contentScore?: IntFieldUpdateOperationsInput | number
     performanceScore?: IntFieldUpdateOperationsInput | number
+    socialScore?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     issues?: IssueUncheckedUpdateManyWithoutAuditNestedInput
     snapshot?: AuditSnapshotUncheckedUpdateOneWithoutAuditNestedInput
@@ -16590,6 +16634,7 @@ export namespace Prisma {
     technicalScore: number
     contentScore: number
     performanceScore: number
+    socialScore?: number
     createdAt?: Date | string
     project: ProjectCreateNestedOneWithoutAuditsInput
     page?: PageCreateNestedOneWithoutAuditsInput
@@ -16609,6 +16654,7 @@ export namespace Prisma {
     technicalScore: number
     contentScore: number
     performanceScore: number
+    socialScore?: number
     createdAt?: Date | string
     metrics?: AuditMetricsUncheckedCreateNestedOneWithoutAuditInput
     snapshot?: AuditSnapshotUncheckedCreateNestedOneWithoutAuditInput
@@ -16666,6 +16712,7 @@ export namespace Prisma {
     technicalScore?: IntFieldUpdateOperationsInput | number
     contentScore?: IntFieldUpdateOperationsInput | number
     performanceScore?: IntFieldUpdateOperationsInput | number
+    socialScore?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     project?: ProjectUpdateOneRequiredWithoutAuditsNestedInput
     page?: PageUpdateOneWithoutAuditsNestedInput
@@ -16685,6 +16732,7 @@ export namespace Prisma {
     technicalScore?: IntFieldUpdateOperationsInput | number
     contentScore?: IntFieldUpdateOperationsInput | number
     performanceScore?: IntFieldUpdateOperationsInput | number
+    socialScore?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     metrics?: AuditMetricsUncheckedUpdateOneWithoutAuditNestedInput
     snapshot?: AuditSnapshotUncheckedUpdateOneWithoutAuditNestedInput
@@ -16808,6 +16856,7 @@ export namespace Prisma {
     technicalScore: number
     contentScore: number
     performanceScore: number
+    socialScore?: number
     createdAt?: Date | string
     project: ProjectCreateNestedOneWithoutAuditsInput
     page?: PageCreateNestedOneWithoutAuditsInput
@@ -16827,6 +16876,7 @@ export namespace Prisma {
     technicalScore: number
     contentScore: number
     performanceScore: number
+    socialScore?: number
     createdAt?: Date | string
     metrics?: AuditMetricsUncheckedCreateNestedOneWithoutAuditInput
     issues?: IssueUncheckedCreateNestedManyWithoutAuditInput
@@ -16858,6 +16908,7 @@ export namespace Prisma {
     technicalScore?: IntFieldUpdateOperationsInput | number
     contentScore?: IntFieldUpdateOperationsInput | number
     performanceScore?: IntFieldUpdateOperationsInput | number
+    socialScore?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     project?: ProjectUpdateOneRequiredWithoutAuditsNestedInput
     page?: PageUpdateOneWithoutAuditsNestedInput
@@ -16877,6 +16928,7 @@ export namespace Prisma {
     technicalScore?: IntFieldUpdateOperationsInput | number
     contentScore?: IntFieldUpdateOperationsInput | number
     performanceScore?: IntFieldUpdateOperationsInput | number
+    socialScore?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     metrics?: AuditMetricsUncheckedUpdateOneWithoutAuditNestedInput
     issues?: IssueUncheckedUpdateManyWithoutAuditNestedInput
@@ -16929,6 +16981,7 @@ export namespace Prisma {
     technicalScore: number
     contentScore: number
     performanceScore: number
+    socialScore?: number
     createdAt?: Date | string
   }
 
@@ -16975,6 +17028,7 @@ export namespace Prisma {
     technicalScore?: IntFieldUpdateOperationsInput | number
     contentScore?: IntFieldUpdateOperationsInput | number
     performanceScore?: IntFieldUpdateOperationsInput | number
+    socialScore?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     page?: PageUpdateOneWithoutAuditsNestedInput
     metrics?: AuditMetricsUpdateOneWithoutAuditNestedInput
@@ -16993,6 +17047,7 @@ export namespace Prisma {
     technicalScore?: IntFieldUpdateOperationsInput | number
     contentScore?: IntFieldUpdateOperationsInput | number
     performanceScore?: IntFieldUpdateOperationsInput | number
+    socialScore?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     metrics?: AuditMetricsUncheckedUpdateOneWithoutAuditNestedInput
     issues?: IssueUncheckedUpdateManyWithoutAuditNestedInput
@@ -17010,6 +17065,7 @@ export namespace Prisma {
     technicalScore?: IntFieldUpdateOperationsInput | number
     contentScore?: IntFieldUpdateOperationsInput | number
     performanceScore?: IntFieldUpdateOperationsInput | number
+    socialScore?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -17045,6 +17101,7 @@ export namespace Prisma {
     technicalScore: number
     contentScore: number
     performanceScore: number
+    socialScore?: number
     createdAt?: Date | string
   }
 
@@ -17058,6 +17115,7 @@ export namespace Prisma {
     technicalScore?: IntFieldUpdateOperationsInput | number
     contentScore?: IntFieldUpdateOperationsInput | number
     performanceScore?: IntFieldUpdateOperationsInput | number
+    socialScore?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     project?: ProjectUpdateOneRequiredWithoutAuditsNestedInput
     metrics?: AuditMetricsUpdateOneWithoutAuditNestedInput
@@ -17076,6 +17134,7 @@ export namespace Prisma {
     technicalScore?: IntFieldUpdateOperationsInput | number
     contentScore?: IntFieldUpdateOperationsInput | number
     performanceScore?: IntFieldUpdateOperationsInput | number
+    socialScore?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     metrics?: AuditMetricsUncheckedUpdateOneWithoutAuditNestedInput
     issues?: IssueUncheckedUpdateManyWithoutAuditNestedInput
@@ -17093,6 +17152,7 @@ export namespace Prisma {
     technicalScore?: IntFieldUpdateOperationsInput | number
     contentScore?: IntFieldUpdateOperationsInput | number
     performanceScore?: IntFieldUpdateOperationsInput | number
+    socialScore?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 

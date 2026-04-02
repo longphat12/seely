@@ -1,6 +1,6 @@
 export type Severity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
 export type IssueStatus = 'OPEN' | 'FIXED' | 'IGNORED'
-export type IssueCategory = 'ON_PAGE' | 'TECHNICAL' | 'CONTENT' | 'PERFORMANCE'
+export type IssueCategory = 'ON_PAGE' | 'TECHNICAL' | 'CONTENT' | 'PERFORMANCE' | 'SOCIAL'
 
 export interface ExtractedSeoData {
   url: string
@@ -45,6 +45,7 @@ export interface SeoScoreBreakdown {
   technical: number
   content: number
   performance: number
+  social: number
 }
 
 export interface AuditPayload {

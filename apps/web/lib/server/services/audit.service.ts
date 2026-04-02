@@ -28,6 +28,7 @@ export async function ingestAudit(payload: AuditPayload, userId?: string) {
       technicalScore: serverScore.technical,
       contentScore: serverScore.content,
       performanceScore: serverScore.performance,
+      socialScore: serverScore.social,
       metrics: {
         create: {
           metaDescription: payload.extracted.metaDescription,

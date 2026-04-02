@@ -167,6 +167,7 @@ exports.Prisma.AuditScalarFieldEnum = {
   technicalScore: 'technicalScore',
   contentScore: 'contentScore',
   performanceScore: 'performanceScore',
+  socialScore: 'socialScore',
   createdAt: 'createdAt'
 };
 
