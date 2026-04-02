@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IssueStatus {
+  OPEN
+  FIXED
+  IGNORED
+}
+
+enum AuditSource {
+  EXTENSION
+  MANUAL
+  SCHEDULED
+  API
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id           String          @id @default(cuid())
+  email        String          @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  memberships  ProjectMember[]
+}
+
+model Project {
+  id        String          @id @default(cuid())
+  name      String
+  domain    String          @unique
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  pages     Page[]
+  audits    Audit[]
+  members   ProjectMember[]
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  userId    String
+  projectId String
+  role      String   // "owner" | "editor" | "viewer"
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+}
+
+model Page {
+  id            String   @id @default(cuid())
+  projectId     String
+  normalizedUrl String
+  path          String
+  firstSeenAt   DateTime @default(now())
+  lastSeenAt    DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  audits  Audit[]
+
+  @@unique([projectId, normalizedUrl])
+  @@index([projectId])
+}
+
+model Audit {
+  id               String         @id @default(cuid())
+  projectId        String
+  pageId           String?
+  source           AuditSource    @default(EXTENSION)
+  url              String
+  title            String?
+  overallScore     Int
+  onPageScore      Int
+  technicalScore   Int
+  contentScore     Int
+  performanceScore Int
+  createdAt        DateTime       @default(now())
+
+  project  Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  page     Page?          @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  metrics  AuditMetrics?
+  issues   Issue[]
+  snapshot AuditSnapshot?
+
+  @@index([projectId, createdAt])
+  @@index([pageId, createdAt])
+}
+
+model AuditMetrics {
+  id                    String   @id @default(cuid())
+  auditId               String   @unique
+
+  metaDescription       String?
+  titleLength           Int?
+  metaDescriptionLength Int?
+  h1Count               Int?
+  h2Count               Int?
+  h3Count               Int?
+  imagesTotal           Int?
+  imagesWithoutAlt      Int?
+  internalLinks         Int?
+  externalLinks         Int?
+  wordCount             Int?
+  hasCanonical          Boolean?
+  canonicalUrl          String?
+  hasMetaRobots         Boolean?
+  metaRobotsContent     String?
+  hasViewport           Boolean?
+  hasSchema             Boolean?
+  schemaTypes           Json?
+  openGraphPresent      Boolean?
+  ogImage               String?
+  twitterCardPresent    Boolean?
+  lcpEstimateMs         Int?
+  domNodeCount          Int?
+  jsRequestCount        Int?
+  cssRequestCount       Int?
+
+  audit Audit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+}
+
+model Issue {
+  id             String               @id @default(cuid())
+  auditId        String
+  code           String
+  category       String               // "ON_PAGE" | "TECHNICAL" | "CONTENT" | "PERFORMANCE"
+  severity       Severity
+  status         IssueStatus          @default(OPEN)
+  title          String
+  message        String
+  recommendation String
+  selector       String?
+  evidence       Json?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  audit   Audit                @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  history IssueStatusHistory[]
+
+  @@index([auditId])
+  @@index([severity])
+  @@index([status])
+  @@index([code])
+}
+
+model IssueStatusHistory {
+  id          String       @id @default(cuid())
+  issueId     String
+  fromStatus  IssueStatus?
+  toStatus    IssueStatus
+  changedById String?
+  changedAt   DateTime     @default(now())
+
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+}
+
+model AuditSnapshot {
+  id         String   @id @default(cuid())
+  auditId    String   @unique
+  rawPayload Json
+  createdAt  DateTime @default(now())
+
+  audit Audit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+}

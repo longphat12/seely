@@ -1,0 +1,1050 @@
+================================================================================
+SEELY — SEO AUDIT PLATFORM — IMPLEMENTATION PLAN v2 (FINAL)
+================================================================================
+
+Kiến trúc chốt: 2 apps duy nhất
+  - Extension (WXT + React + TypeScript) — tách riêng hoàn toàn
+  - Web (Next.js) — chứa cả Dashboard UI lẫn Backend API (Route Handlers)
+  - KHÔNG có NestJS. KHÔNG có apps/api riêng.
+  - PostgreSQL chạy Docker. Schema quản lý bằng Prisma migrations.
+
+================================================================================
+KIẾN TRÚC TỔNG THỂ
+================================================================================
+
+┌─────────────────────────┐      HTTPS       ┌─────────────────────────────────┐
+│  Chrome Extension       │  Bearer token    │  Next.js App (apps/web)         │
+│  (apps/extension)       │ ──────────────►  │                                 │
+│  WXT + React + TS       │                  │  ┌───────────────────────┐      │
+│                         │                  │  │ Route Handlers        │      │
+│  • content script       │                  │  │ app/api/**            │      │
+│  • background worker    │                  │  │ (backend logic)       │      │
+│  • popup (quick score)  │                  │  └──────────┬────────────┘      │
+│                         │                  │             │                   │
+└─────────────────────────┘                  │  ┌──────────▼────────────┐      │
+      tách riêng hoàn toàn                   │  │ lib/server/services   │      │
+                                             │  │ Prisma ORM            │      │
+  ┌──────────────────────┐                   │  └──────────┬────────────┘      │
+  │  Browser (user)      │  session cookie   │             │                   │
+  │  truy cập dashboard  │ ──────────────►   │  ┌──────────▼────────────┐      │
+  └──────────────────────┘                   │  │ Dashboard UI          │      │
+                                             │  │ App Router pages      │      │
+                                             │  └───────────────────────┘      │
+                                             └─────────────────────────────────┘
+                                                           │
+                                                           ▼
+                                             ┌───────────────────────┐
+                                             │  PostgreSQL 16        │
+                                             │  Docker Container     │
+                                             └───────────────────────┘
+
+Quyết định kiến trúc:
+
+  Extension tách riêng       → lifecycle, build, deploy (Chrome Web Store) riêng biệt
+  Dashboard+Backend gộp      → Route Handlers đủ mạnh, 1 deploy, giảm complexity
+  KHÔNG dùng NestJS          → tránh over-engineer; Next.js API routes + Prisma đủ
+  Docker chỉ chạy Postgres   → web app chạy native pnpm dev, không container hóa
+  Prisma migrations          → version-controlled schema, auto migrate, rollback an toàn
+  Extension: Bearer token    → tách mechanism auth riêng cho extension runtime
+  Web: session cookie        → httpOnly cookie cho dashboard
+  Project auto-create        → phase 1 extension gửi domain → server tự tạo project
+  Score: local + server      → extension tính local hiển thị nhanh, server re-score là source of truth
+  MVP: popup + dashboard     → sidepanel làm sau để ra sản phẩm nhanh
+
+================================================================================
+1. TECH STACK
+================================================================================
+
+Extension (apps/extension) — app riêng:
+  - WXT (framework extension, MV3, multi-browser)
+  - React 19 + TypeScript
+  - Tailwind CSS
+  - Zod
+
+Web (apps/web) — Dashboard + Backend:
+  - Next.js 15 App Router
+  - React 19 + TypeScript
+  - Tailwind CSS + shadcn/ui
+  - Prisma ORM + PostgreSQL 16
+  - Route Handlers (app/api/**) thay cho backend riêng
+  - TanStack Query (client-side fetching)
+  - Recharts (charts)
+  - Zod (validate payloads)
+  - Argon2 (password hash)
+  - JWT (auth)
+
+Shared Packages:
+  - @seely/seo-types   — shared TypeScript interfaces
+  - @seely/seo-rules   — rule engine + scoring (pure functions)
+  - @seely/seo-parser  — DOM extraction helpers
+
+Infra & DX:
+  - pnpm workspace + Turborepo
+  - Docker Compose → PostgreSQL 16
+  - Vitest (unit + integration)
+  - Playwright (E2E)
+  - Sentry (observability)
+
+================================================================================
+2. CẤU TRÚC MONOREPO
+================================================================================
+
+seely/
+├── apps/
+│   ├── extension/                    # WXT — TÁCH RIÊNG
+│   │   ├── entrypoints/
+│   │   │   ├── background.ts
+│   │   │   ├── content.ts
+│   │   │   └── popup/
+│   │   │       ├── App.tsx
+│   │   │       ├── main.tsx
+│   │   │       └── index.html
+│   │   ├── lib/
+│   │   │   ├── extract-seo-data.ts
+│   │   │   ├── message-types.ts
+│   │   │   ├── api-client.ts
+│   │   │   └── auth.ts
+│   │   ├── components/
+│   │   ├── public/icon/
+│   │   ├── wxt.config.ts
+│   │   ├── tailwind.config.ts
+│   │   ├── tsconfig.json
+│   │   └── package.json
+│   │
+│   └── web/                          # Next.js = Dashboard + Backend
+│       ├── app/
+│       │   ├── layout.tsx
+│       │   ├── page.tsx
+│       │   ├── (auth)/
+│       │   │   ├── login/page.tsx
+│       │   │   └── register/page.tsx
+│       │   ├── (dashboard)/
+│       │   │   ├── layout.tsx
+│       │   │   ├── projects/
+│       │   │   │   ├── page.tsx
+│       │   │   │   └── [projectId]/
+│       │   │   │       ├── page.tsx
+│       │   │   │       └── pages/page.tsx
+│       │   │   ├── pages/
+│       │   │   │   └── [pageId]/page.tsx
+│       │   │   └── audits/
+│       │   │       └── [auditId]/page.tsx
+│       │   └── api/                  # ← BACKEND LOGIC Ở ĐÂY
+│       │       ├── auth/
+│       │       │   ├── register/route.ts
+│       │       │   ├── login/route.ts
+│       │       │   └── logout/route.ts
+│       │       ├── projects/
+│       │       │   ├── route.ts
+│       │       │   └── [projectId]/
+│       │       │       ├── route.ts
+│       │       │       ├── audits/route.ts
+│       │       │       ├── pages/route.ts
+│       │       │       ├── summary/route.ts
+│       │       │       ├── history/route.ts
+│       │       │       └── top-issues/route.ts
+│       │       ├── audits/
+│       │       │   ├── route.ts
+│       │       │   └── [auditId]/
+│       │       │       ├── route.ts
+│       │       │       └── issues/route.ts
+│       │       ├── pages/
+│       │       │   └── [pageId]/
+│       │       │       ├── route.ts
+│       │       │       └── audits/route.ts
+│       │       └── issues/
+│       │           └── [issueId]/
+│       │               └── status/route.ts
+│       ├── lib/
+│       │   ├── prisma.ts
+│       │   ├── auth.ts
+│       │   ├── middleware-auth.ts
+│       │   ├── validators/
+│       │   │   ├── audit.ts
+│       │   │   ├── project.ts
+│       │   │   ├── auth.ts
+│       │   │   └── issue.ts
+│       │   └── server/
+│       │       ├── services/
+│       │       │   ├── audit.service.ts
+│       │       │   ├── project.service.ts
+│       │       │   ├── page.service.ts
+│       │       │   ├── issue.service.ts
+│       │       │   └── auth.service.ts
+│       │       └── helpers/
+│       │           ├── url-normalize.ts
+│       │           └── domain-extract.ts
+│       ├── components/
+│       │   ├── ui/               # shadcn/ui
+│       │   ├── charts/
+│       │   ├── dashboard/
+│       │   └── layout/
+│       ├── hooks/
+│       ├── next.config.ts
+│       ├── tailwind.config.ts
+│       ├── tsconfig.json
+│       └── package.json
+│
+├── packages/
+│   ├── seo-types/
+│   │   ├── src/
+│   │   │   ├── index.ts
+│   │   │   ├── audit.ts
+│   │   │   ├── issue.ts
+│   │   │   └── score.ts
+│   │   ├── tsconfig.json
+│   │   └── package.json
+│   ├── seo-rules/
+│   │   ├── src/
+│   │   │   ├── index.ts
+│   │   │   ├── engine.ts
+│   │   │   ├── scorer.ts
+│   │   │   └── rules/
+│   │   │       ├── on-page/
+│   │   │       ├── technical/
+│   │   │       ├── content/
+│   │   │       └── performance/
+│   │   ├── __tests__/
+│   │   ├── tsconfig.json
+│   │   └── package.json
+│   └── seo-parser/
+│       ├── src/
+│       │   ├── index.ts
+│       │   ├── extractor.ts
+│       │   ├── url-utils.ts
+│       │   └── text-utils.ts
+│       ├── tsconfig.json
+│       └── package.json
+│
+├── prisma/
+│   ├── schema.prisma
+│   ├── migrations/
+│   └── seed.ts
+│
+├── infra/
+│   └── docker/
+│       └── docker-compose.yml
+│
+├── .env.example
+├── package.json
+├── pnpm-workspace.yaml
+├── turbo.json
+└── README.md
+
+LƯU Ý QUAN TRỌNG:
+  - KHÔNG có thư mục apps/api/
+  - KHÔNG có NestJS
+  - Toàn bộ backend logic nằm trong apps/web/app/api/ và apps/web/lib/server/
+
+================================================================================
+3. DOCKER — POSTGRESQL ONLY
+================================================================================
+
+File: infra/docker/docker-compose.yml
+
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: seely_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: seely_user
+      POSTGRES_PASSWORD: seely_pass
+      POSTGRES_DB: seely_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - seely_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U seely_user -d seely_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  seely_postgres_data:
+
+LƯU Ý:
+  - Docker CHỈ chạy PostgreSQL
+  - Web app chạy native pnpm dev
+  - Schema do Prisma migrations quản lý — KHÔNG dùng init.sql
+
+================================================================================
+4. PRISMA SCHEMA (PRODUCTION-READY)
+================================================================================
+
+File: prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IssueStatus {
+  OPEN
+  FIXED
+  IGNORED
+}
+
+enum AuditSource {
+  EXTENSION
+  MANUAL
+  SCHEDULED
+  API
+}
+
+model User {
+  id           String          @id @default(cuid())
+  email        String          @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  memberships  ProjectMember[]
+}
+
+model Project {
+  id        String          @id @default(cuid())
+  name      String
+  domain    String          @unique
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  pages     Page[]
+  audits    Audit[]
+  members   ProjectMember[]
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  userId    String
+  projectId String
+  role      String   // "owner" | "editor" | "viewer"
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@unique([userId, projectId])
+}
+
+model Page {
+  id            String   @id @default(cuid())
+  projectId     String
+  normalizedUrl String
+  path          String
+  firstSeenAt   DateTime @default(now())
+  lastSeenAt    DateTime @default(now())
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  audits        Audit[]
+  @@unique([projectId, normalizedUrl])
+  @@index([projectId])
+}
+
+model Audit {
+  id               String         @id @default(cuid())
+  projectId        String
+  pageId           String?
+  source           AuditSource    @default(EXTENSION)
+  url              String
+  title            String?
+  overallScore     Int
+  onPageScore      Int
+  technicalScore   Int
+  contentScore     Int
+  performanceScore Int
+  createdAt        DateTime       @default(now())
+  project          Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  page             Page?          @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  metrics          AuditMetrics?
+  issues           Issue[]
+  snapshot         AuditSnapshot?
+  @@index([projectId, createdAt])
+  @@index([pageId, createdAt])
+}
+
+model AuditMetrics {
+  id                    String   @id @default(cuid())
+  auditId               String   @unique
+  metaDescription       String?
+  titleLength           Int?
+  metaDescriptionLength Int?
+  h1Count               Int?
+  h2Count               Int?
+  h3Count               Int?
+  imagesTotal           Int?
+  imagesWithoutAlt      Int?
+  internalLinks         Int?
+  externalLinks         Int?
+  wordCount             Int?
+  hasCanonical          Boolean?
+  canonicalUrl          String?
+  hasMetaRobots         Boolean?
+  metaRobotsContent     String?
+  hasViewport           Boolean?
+  hasSchema             Boolean?
+  schemaTypes           Json?
+  openGraphPresent      Boolean?
+  twitterCardPresent    Boolean?
+  lcpEstimateMs         Int?
+  domNodeCount          Int?
+  jsRequestCount        Int?
+  cssRequestCount       Int?
+  audit                 Audit    @relation(fields: [auditId], references: [id], onDelete: Cascade)
+}
+
+model Issue {
+  id             String               @id @default(cuid())
+  auditId        String
+  code           String
+  category       String               // "ON_PAGE" | "TECHNICAL" | "CONTENT" | "PERFORMANCE"
+  severity       Severity
+  status         IssueStatus          @default(OPEN)
+  title          String
+  message        String
+  recommendation String
+  selector       String?
+  evidence       Json?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  audit          Audit                @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  history        IssueStatusHistory[]
+  @@index([auditId])
+  @@index([severity])
+  @@index([status])
+  @@index([code])
+}
+
+model IssueStatusHistory {
+  id          String       @id @default(cuid())
+  issueId     String
+  fromStatus  IssueStatus?
+  toStatus    IssueStatus
+  changedById String?
+  changedAt   DateTime     @default(now())
+  issue       Issue        @relation(fields: [issueId], references: [id], onDelete: Cascade)
+}
+
+model AuditSnapshot {
+  id         String   @id @default(cuid())
+  auditId    String   @unique
+  rawPayload Json
+  createdAt  DateTime @default(now())
+  audit      Audit    @relation(fields: [auditId], references: [id], onDelete: Cascade)
+}
+
+Migration workflow:
+  # Dev — tạo migration khi thay đổi schema
+  pnpm prisma migrate dev --name <tên>
+
+  # Production — apply migrations
+  pnpm prisma migrate deploy
+
+  # Generate client
+  pnpm prisma generate
+
+================================================================================
+5. ENVIRONMENT VARIABLES
+================================================================================
+
+File: .env.example
+
+NODE_ENV=development
+DATABASE_URL=postgresql://seely_user:seely_pass@localhost:5432/seely_db?schema=public
+JWT_SECRET=replace_me_with_random_64_chars
+JWT_EXPIRES_IN=7d
+PORT=3000
+CORS_ORIGIN=http://localhost:3000
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3000
+EXTENSION_API_BASE_URL=http://localhost:3000
+
+================================================================================
+6. API SPEC — 18 ENDPOINTS (NEXT.JS ROUTE HANDLERS)
+================================================================================
+
+Tất cả nằm trong apps/web/app/api/.
+KHÔNG có NestJS. KHÔNG có apps/api riêng.
+
+--- Auth (3 endpoints) ---
+
+#1  POST  /api/auth/register    Đăng ký → Argon2 hash → tạo User → trả JWT
+#2  POST  /api/auth/login       Đăng nhập → verify → trả JWT
+#3  POST  /api/auth/logout      Xóa session cookie
+
+--- Projects (4 endpoints) ---
+
+#4  GET   /api/projects                    List projects của user
+#5  POST  /api/projects                    Tạo project (name, domain)
+#6  GET   /api/projects/[projectId]        Chi tiết project
+#7  PATCH /api/projects/[projectId]        Cập nhật project
+
+--- Pages (2 endpoints) ---
+
+#8  GET   /api/projects/[projectId]/pages  List pages của project
+#9  GET   /api/pages/[pageId]              Chi tiết page
+
+--- Audits (4 endpoints) ---
+
+#10 POST  /api/audits                      Ingest audit — endpoint chính từ extension
+#11 GET   /api/audits/[auditId]            Chi tiết audit
+#12 GET   /api/projects/[projectId]/audits List audits của project
+#13 GET   /api/pages/[pageId]/audits       Audits của page
+
+--- Issues (2 endpoints) ---
+
+#14 GET   /api/audits/[auditId]/issues     List issues của audit
+#15 PATCH /api/issues/[issueId]/status     Đổi trạng thái (OPEN/FIXED/IGNORED)
+
+--- Reports (3 endpoints) ---
+
+#16 GET   /api/projects/[projectId]/summary      KPI: latest scores, total pages, audits, open issues
+#17 GET   /api/projects/[projectId]/history       Score theo thời gian (cho charts)
+#18 GET   /api/projects/[projectId]/top-issues    Top issues quan trọng nhất
+
+--- Audit Ingest Logic (endpoint #10: POST /api/audits) ---
+
+  1. Validate body bằng Zod (reject nếu payload > 256KB)
+  2. Chuẩn hóa domain
+  3. Tìm hoặc tạo Project theo domain (auto-create phase 1)
+  4. Chuẩn hóa URL → tìm hoặc tạo Page
+  5. Server re-score bằng @seely/seo-rules (source of truth)
+  6. Tạo Audit record
+  7. Tạo AuditMetrics
+  8. Bulk create Issues
+  9. Tạo AuditSnapshot (raw JSON, max 256KB)
+  10. Cập nhật Page.lastSeenAt
+  11. Trả về { auditId, overallScore }
+
+================================================================================
+7. SHARED TYPES (@seely/seo-types)
+================================================================================
+
+File: packages/seo-types/src/audit.ts
+
+export type Severity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+export type IssueStatus = 'OPEN' | 'FIXED' | 'IGNORED'
+export type IssueCategory = 'ON_PAGE' | 'TECHNICAL' | 'CONTENT' | 'PERFORMANCE'
+
+export interface ExtractedSeoData {
+  url: string
+  title: string | null
+  metaDescription: string | null
+  canonicalUrl: string | null
+  metaRobotsContent: string | null
+  h1Count: number
+  h2Count: number
+  h3Count: number
+  imagesTotal: number
+  imagesWithoutAlt: number
+  internalLinks: number
+  externalLinks: number
+  wordCount: number
+  hasViewport: boolean
+  hasSchema: boolean
+  schemaTypes: string[]
+  openGraphPresent: boolean
+  twitterCardPresent: boolean
+  domNodeCount: number
+  jsRequestCount: number | null
+  cssRequestCount: number | null
+  lcpEstimateMs: number | null
+}
+
+export interface SeoIssue {
+  code: string
+  category: IssueCategory
+  severity: Severity
+  title: string
+  message: string
+  recommendation: string
+  selector?: string
+  evidence?: Record<string, unknown>
+}
+
+export interface SeoScoreBreakdown {
+  overall: number     // 0–100
+  onPage: number      // 0–100
+  technical: number   // 0–100
+  content: number     // 0–100
+  performance: number // 0–100
+}
+
+export interface AuditPayload {
+  projectDomain: string
+  url: string
+  extracted: ExtractedSeoData
+  score: SeoScoreBreakdown
+  issues: SeoIssue[]
+  extensionVersion: string
+  userAgent: string
+  scannedAt: string   // ISO 8601
+}
+
+================================================================================
+8. SEO RULE ENGINE (@seely/seo-rules)
+================================================================================
+
+Triết lý:
+  - Pure functions: Input ExtractedSeoData → Output SeoIssue[]
+  - Deterministic: cùng input luôn cho cùng output
+  - KHÔNG phụ thuộc DOM: DOM parser và rule engine tách riêng hoàn toàn
+
+--- 18 Rules MVP — KHÓA CỨNG ---
+
+#   Code                    Category      Severity    Trigger
+1   TITLE_MISSING           ON_PAGE       CRITICAL    title null/rỗng
+2   TITLE_TOO_SHORT         ON_PAGE       MEDIUM      title < 30 ký tự
+3   TITLE_TOO_LONG          ON_PAGE       MEDIUM      title > 60 ký tự
+4   META_DESC_MISSING       ON_PAGE       HIGH        metaDescription null/rỗng
+5   META_DESC_TOO_SHORT     ON_PAGE       MEDIUM      metaDescription < 70 ký tự
+6   META_DESC_TOO_LONG      ON_PAGE       LOW         metaDescription > 160 ký tự
+7   H1_MISSING              ON_PAGE       HIGH        h1Count === 0
+8   H1_MULTIPLE             ON_PAGE       MEDIUM      h1Count > 1
+9   H2_MISSING              ON_PAGE       MEDIUM      h2Count === 0
+10  CANONICAL_MISSING       TECHNICAL     HIGH        canonicalUrl null
+11  META_ROBOTS_NOINDEX     TECHNICAL     CRITICAL    metaRobotsContent chứa "noindex"
+12  VIEWPORT_MISSING        TECHNICAL     HIGH        hasViewport === false
+13  SCHEMA_MISSING          TECHNICAL     MEDIUM      hasSchema === false
+14  OG_MISSING              TECHNICAL     LOW         openGraphPresent === false
+15  TWITTER_CARD_MISSING    TECHNICAL     LOW         twitterCardPresent === false
+16  IMAGES_ALT_MISSING      CONTENT       HIGH        imagesWithoutAlt > 0
+17  WORD_COUNT_LOW          CONTENT       HIGH        wordCount < 300
+18  DOM_TOO_LARGE           PERFORMANCE   MEDIUM      domNodeCount > 1500
+
+--- Rules giai đoạn SAU (KHÔNG làm trong MVP) ---
+
+  INTERNAL_LINKS_LOW     — phụ thuộc ngữ cảnh trang
+  LCP_SLOW               — browser API không ổn định trên mọi trang
+  HTTPS_NOT_SECURE       — cần kiểm tra protocol
+  TOO_MANY_JS_REQUESTS   — performance entries không đều
+
+--- Scoring Algorithm ---
+
+  Category weights (max possible per category):
+    ON_PAGE:     35
+    TECHNICAL:   25
+    CONTENT:     20
+    PERFORMANCE: 20
+
+  Penalty per severity:
+    CRITICAL: -15
+    HIGH:     -10
+    MEDIUM:   -6
+    LOW:      -3
+
+  Algorithm:
+    1. Cho mỗi category, bắt đầu từ max weight
+    2. Trừ penalty theo severity của từng issue thuộc category đó
+    3. Clamp category raw: max(0, result)
+    4. Normalize mỗi category lên thang 0–100:
+       category_score_100 = (category_raw / category_weight) * 100
+       clamp 0–100
+    5. overall = weighted average:
+       (onPage_100 * 35 + technical_100 * 25 + content_100 * 20 + performance_100 * 20) / 100
+       clamp 0–100
+
+  Constraints:
+    ✓ Mỗi category có max score riêng
+    ✓ KHÔNG cho category score âm
+    ✓ overall là weighted average, KHÔNG trừ thẳng từ 100
+
+--- Ví dụ 1 rule ---
+
+File: packages/seo-rules/src/rules/on-page/title-missing.ts
+
+import { ExtractedSeoData, SeoIssue } from '@seely/seo-types'
+
+export function ruleTitleMissing(data: ExtractedSeoData): SeoIssue[] {
+  if (data.title && data.title.trim().length > 0) return []
+
+  return [
+    {
+      code: 'TITLE_MISSING',
+      category: 'ON_PAGE',
+      severity: 'CRITICAL',
+      title: 'Missing page title',
+      message: 'The page has no title tag or the title is empty.',
+      recommendation: 'Add a unique, descriptive title tag between 30–60 characters.',
+      evidence: {}
+    }
+  ]
+}
+
+================================================================================
+9. DOM PARSER (@seely/seo-parser)
+================================================================================
+
+Content script gọi hàm extractSeoData() để đọc:
+
+  Data                  Selector / API
+  title                 document.title
+  meta description      meta[name="description"] → .content
+  canonical             link[rel="canonical"] → .href
+  robots                meta[name="robots"] → .content
+  viewport              meta[name="viewport"] → exists?
+  h1/h2/h3 count        querySelectorAll('h1/h2/h3').length
+  images total          document.images.length
+  images without alt    .filter(img => !img.alt.trim())
+  internal links        a[href] cùng hostname
+  external links        a[href] khác hostname
+  word count            body.innerText, loại script/style/noscript, đếm từ
+  DOM node count        querySelectorAll('*').length
+  schema/JSON-LD        script[type="application/ld+json"] → parse
+  Open Graph            meta[property^="og:"] → exists?
+  Twitter Card          meta[name^="twitter:"] → exists?
+
+Output: ExtractedSeoData object
+Hàm phải pure, trả object — không side effect.
+
+================================================================================
+10. EXTENSION ARCHITECTURE
+================================================================================
+
+MVP scope: popup + dashboard web
+KHÔNG làm sidepanel trong MVP. Sidepanel phase sau.
+
+--- Message Contract ---
+
+type ExtensionMessage =
+  | { type: 'REQUEST_SCAN' }
+  | { type: 'SCAN_RESULT'; payload: ExtractedSeoData }
+  | { type: 'SAVE_AUDIT'; payload: AuditPayload }
+  | { type: 'SAVE_AUDIT_SUCCESS'; auditId: string }
+  | { type: 'SAVE_AUDIT_ERROR'; error: string }
+  | { type: 'GET_AUTH_TOKEN' }
+  | { type: 'AUTH_TOKEN'; token: string | null }
+
+--- Entrypoint Roles ---
+
+  content.ts      extractSeoData() từ DOM, trả kết quả qua messaging
+  background.ts   Giữ Bearer token (chrome.storage.local), gọi API, cache result theo tabId, chạy rule engine
+  popup/          Score nhanh, top 5 issues, nút Save Audit, nút Open Dashboard
+
+--- Flow ---
+
+  1. User click extension icon → popup mở
+  2. Popup → background: REQUEST_SCAN
+  3. Background → content script (tab hiện tại): REQUEST_SCAN
+  4. Content script chạy extractSeoData()
+  5. Content → background: SCAN_RESULT
+  6. Background chạy @seely/seo-rules engine → score + issues
+  7. Background → popup: hiển thị score + top issues
+  8. User click "Save" → background: POST /api/audits (Bearer token)
+  9. Dashboard hiển thị audit mới
+
+================================================================================
+11. AUTH PLAN
+================================================================================
+
+                    Extension                  Dashboard Web
+  Mechanism         Bearer access token        Session cookie (httpOnly)
+  Storage           chrome.storage.local       httpOnly cookie set by Route Handler
+                    via background
+  Login flow        Popup form →               Page form →
+                    POST /api/auth/login →     POST /api/auth/login →
+                    store token                set cookie
+  Phase 1           JWT 7 ngày                 JWT 7 ngày
+                    không refresh token        không refresh token
+  Phase 2           Thêm refresh token         Thêm refresh token, OAuth
+
+QUAN TRỌNG:
+  - Extension và Web KHÔNG dùng chung mechanism
+  - Extension dùng Bearer header
+  - Web dùng cookie
+  - Route handler kiểm tra cả 2 (Bearer hoặc cookie)
+
+================================================================================
+12. DASHBOARD PAGES & COMPONENTS
+================================================================================
+
+--- Routes ---
+
+  /login                    Client     Form đăng nhập
+  /register                 Client     Form đăng ký
+  /projects                 SC+CC      List projects, latest score, audit count
+  /projects/[id]            SC+CC      KPI cards, score chart, top issues, recent audits
+  /projects/[id]/pages      SC+CC      Table pages kèm latest score, filter/sort
+  /pages/[id]               SC+CC      Page metrics, audit history, issues
+  /audits/[id]              SC+CC      Full report, score breakdown, grouped issues
+
+  SC = Server Component, CC = Client Component
+
+--- Components ---
+
+  KPI Cards (Server Component):
+    Overall Score (gauge/circular progress)
+    On-page Score
+    Technical Score
+    Content Score
+    Performance Score
+    Open Issues count
+    Total Audits
+
+  Charts (Client Component):
+    ScoreLineChart        score theo thời gian (Recharts Line)
+    IssueSeverityBar      issue count theo severity (Recharts Bar)
+    CategoryPieChart      issue distribution theo category (Recharts Pie)
+
+  Tables (Client Component):
+    IssueTable            severity badge, code, title, recommendation, status dropdown
+    PageTable             URL, latest score, issue count, last audit time
+    AuditHistory          date, score, issue count, source
+
+  Layout:
+    Sidebar               Projects, Pages, Settings
+    Topbar                user info, logout
+
+================================================================================
+13. NON-FUNCTIONAL REQUIREMENTS
+================================================================================
+
+  NFR                                                Target
+  API p95 response — GET /api/projects/[id]/summary  < 500ms trên seed data
+  Extension scan duration trung bình                 < 1.5s trên page phổ thông
+  Audit payload max size                             256KB
+  AuditSnapshot raw JSON max                         256KB
+  Raw snapshot retention                             90 ngày, sau đó soft-delete/archive
+  Migration idempotent                               prisma migrate deploy chạy lại nhiều lần không lỗi
+
+================================================================================
+14. SECURITY
+================================================================================
+
+  - CORS: chỉ dashboard origin + extension origin
+  - Rate limit: /api/auth/* (10 req/min), /api/audits POST (30 req/min)
+  - Validate mọi payload bằng Zod, reject > 256KB
+  - Sanitize DOM strings trước khi lưu
+  - Không render HTML thô từ evidence
+  - Password: Argon2
+  - JWT secret KHÔNG commit
+  - Multi-tenant: mọi query filter theo userId/projectId
+
+================================================================================
+15. TESTING
+================================================================================
+
+  Layer          Tool        Scope
+  Unit           Vitest      18 SEO rules, score engine, URL normalization,
+                             word count, link classification
+  Integration    Vitest      Route handlers: auth, create project, ingest audit,
+                             update issue status
+  E2E            Playwright  Login → extension scan → save audit → dashboard hiển thị
+
+  Test coverage target cho @seely/seo-rules: > 80%
+
+================================================================================
+16. OBSERVABILITY
+================================================================================
+
+  - Sentry cho error tracking + performance monitoring
+  - Structured logging cho audit ingest
+  - Metrics theo dõi:
+    - scan failure rate
+    - sync failure rate
+    - median scan duration
+    - dashboard TTFB
+
+================================================================================
+17. CODEX EXECUTION TASKS (7 tasks, tuần tự)
+================================================================================
+
+--- Task 1: Bootstrap Monorepo ---
+
+  - Tạo root: pnpm-workspace.yaml, turbo.json, root package.json
+  - Tạo apps/web bằng create-next-app (App Router, TypeScript, Tailwind)
+  - Tạo apps/extension bằng WXT (create wxt@latest)
+  - Tạo packages/seo-types, packages/seo-rules, packages/seo-parser
+  - Config TypeScript, ESLint, Prettier chung
+  - KHÔNG tạo apps/api
+  - Verify: pnpm install + pnpm build pass
+
+--- Task 2: Docker + Prisma ---
+
+  - Tạo infra/docker/docker-compose.yml (Postgres 16 only, không container web/api)
+  - Tạo prisma/schema.prisma (full schema: 9 models, 3 enums, indexes)
+  - pnpm prisma migrate dev --name init → tạo migration
+  - Viết prisma/seed.ts (1 user test + 1 project + 1 audit mẫu)
+  - Verify: pnpm db:up + migrate + seed thành công
+  - Verify: chạy lại prisma migrate deploy không lỗi
+
+--- Task 3: Shared Contracts ---
+
+  - @seely/seo-types: interfaces ExtractedSeoData, SeoIssue, SeoScoreBreakdown, AuditPayload
+  - @seely/seo-parser: hàm extractSeoData(), URL utils, text utils
+  - @seely/seo-rules: 18 rules MVP (mỗi rule 1 file), score engine, rule engine orchestrator
+  - Zod validators cho AuditPayload
+  - Unit tests: coverage > 80% cho seo-rules
+  - Verify: pnpm test --filter=@seely/seo-rules pass
+
+--- Task 4: Next.js Backend (Route Handlers) ---
+
+  - lib/prisma.ts — PrismaClient singleton
+  - lib/auth.ts — JWT sign/verify, Argon2 hash/compare
+  - lib/middleware-auth.ts — auth guard wrapper cho route handlers
+    (kiểm tra cả Bearer token lẫn session cookie)
+  - lib/validators/ — Zod schemas per endpoint
+  - lib/server/services/ — business logic (audit, project, page, issue, auth)
+  - 18 route handlers:
+    auth ×3, projects ×4, pages ×2, audits ×4, issues ×2, reports ×3
+  - KHÔNG dùng NestJS, KHÔNG tạo apps/api
+  - Integration tests cho ingest audit + auth flow
+  - Verify: pnpm dev:web → curl tất cả 18 endpoints
+
+--- Task 5: Extension ---
+
+  - wxt.config.ts với manifest v3
+  - content.ts → dùng @seely/seo-parser extractSeoData()
+  - background.ts → auth token storage, API call, message handling, rule engine
+  - popup/ → React UI: score, top 5 issues, Save button, Open Dashboard button
+  - KHÔNG làm sidepanel trong MVP
+  - Message contract đúng spec
+  - lib/api-client.ts → gọi Next.js route handlers với Bearer token
+  - Verify: pnpm dev:ext → load extension → scan 1 trang thật → save thành công
+
+--- Task 6: Dashboard UI ---
+
+  - Login + Register pages
+  - Dashboard layout (Sidebar + Topbar + AuthGuard)
+  - /projects — list page
+  - /projects/[id] — KPI cards + ScoreLineChart + IssueSeverityBar + top issues
+  - /projects/[id]/pages — PageTable
+  - /pages/[id] — page metrics, audit history
+  - /audits/[id] — full report, grouped issues, status dropdown
+  - shadcn/ui components init
+  - Recharts charts
+  - Dark mode mặc định, hỗ trợ light mode
+  - UI language: Tiếng Anh
+  - Verify: login → thấy project → thấy audit từ seed data → charts render đúng
+
+--- Task 7: Quality & Polish ---
+
+  - ESLint + Prettier check pass
+  - TypeScript strict, no any
+  - Unit tests (seo-rules, seo-parser)
+  - Integration tests (route handlers)
+  - Playwright E2E: login → scan → save → dashboard verify
+  - README.md với exact setup commands:
+    clone, install, db:up, migrate, seed, dev
+  - .env.example đầy đủ
+  - Verify: pnpm lint && pnpm typecheck && pnpm test && pnpm build all pass
+
+================================================================================
+18. ROOT CONFIG FILES
+================================================================================
+
+--- pnpm-workspace.yaml ---
+
+packages:
+  - "apps/*"
+  - "packages/*"
+
+--- turbo.json ---
+
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "dev": { "cache": false, "persistent": true },
+    "build": { "dependsOn": ["^build"], "outputs": [".next/**", "dist/**", ".output/**"] },
+    "lint": { "dependsOn": ["^build"] },
+    "test": { "dependsOn": ["^build"] },
+    "typecheck": { "dependsOn": ["^build"] }
+  }
+}
+
+--- Root package.json scripts ---
+
+{
+  "name": "seely",
+  "private": true,
+  "packageManager": "pnpm@10",
+  "scripts": {
+    "dev": "turbo dev",
+    "dev:web": "turbo dev --filter=@seely/web",
+    "dev:ext": "turbo dev --filter=@seely/extension",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "typecheck": "turbo typecheck",
+    "db:up": "docker compose -f infra/docker/docker-compose.yml up -d",
+    "db:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "db:logs": "docker compose -f infra/docker/docker-compose.yml logs -f postgres",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:studio": "prisma studio"
+  }
+}
+
+================================================================================
+19. QUY TRÌNH DEV (DEVELOPER CHẠY LẦN ĐẦU)
+================================================================================
+
+  # 1. Clone + install
+  git clone <repo> && cd seely && pnpm install
+
+  # 2. Env
+  cp .env.example .env
+
+  # 3. Start Postgres
+  pnpm db:up
+
+  # 4. Create schema
+  pnpm prisma migrate dev --name init
+
+  # 5. Generate client
+  pnpm prisma generate
+
+  # 6. Seed
+  pnpm prisma seed
+
+  # 7. Dev
+  pnpm dev          # cả web + extension
+  pnpm dev:web      # Next.js only (port 3000)
+  pnpm dev:ext      # WXT extension only
+
+================================================================================
+20. ACCEPTANCE CRITERIA
+================================================================================
+
+  [ ] pnpm db:up → PostgreSQL chạy trong Docker
+  [ ] pnpm prisma migrate dev → schema tạo thành công
+  [ ] pnpm prisma migrate deploy chạy lại nhiều lần không lỗi
+  [ ] pnpm dev:web → Next.js chạy fullstack (dashboard + API) — KHÔNG cần apps/api
+  [ ] pnpm dev:ext → Extension load được trong Chrome
+  [ ] Extension scan 1 trang thật → hiển thị score + issues trong popup
+  [ ] Extension login → save audit → gọi Next.js route handler thành công → audit lưu DB
+  [ ] Dashboard login → /projects thấy project → /projects/[id] thấy audit vừa lưu
+  [ ] Project summary page render đúng KPI từ dữ liệu DB thật
+  [ ] Charts hiển thị (score history, issue distribution)
+  [ ] 18 SEO rules hoạt động đúng
+  [ ] Unit tests pass cho seo-rules + seo-parser
+  [ ] Integration tests pass cho route handlers
+  [ ] pnpm lint && pnpm typecheck && pnpm build pass
+
+================================================================================
+21. CÁC QUYẾT ĐỊNH ĐÃ CHỐT
+================================================================================
+
+  Câu hỏi                                    Quyết định
+  Auth phase 1?                               Email/password, web=session cookie, extension=Bearer token
+  Project tạo tự động hay thủ công?           Auto-create theo domain ở phase 1
+  Score tính ở đâu?                           Extension tính local (nhanh), server re-score (source of truth)
+  MVP có sidepanel không?                     Không. Popup + dashboard web trước. Sidepanel phase sau
+  Package scope?                              @seely/*
+  UI language?                                Tiếng Anh
+  Theme?                                      Dark mode mặc định, hỗ trợ cả light
+
+================================================================================
+END OF PLAN v2
+================================================================================

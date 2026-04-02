@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: seely_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: seely_user
+      POSTGRES_PASSWORD: seely_pass
+      POSTGRES_DB: seely_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - seely_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U seely_user -d seely_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  seely_postgres_data:
