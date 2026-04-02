@@ -22,6 +22,7 @@ const extractedSeoDataSchema = z.object({
   schemaTypes: z.array(z.string()),
   openGraphPresent: z.boolean(),
   twitterCardPresent: z.boolean(),
+  ogImage: z.string().nullable(),
   domNodeCount: z.number().int().min(0),
   jsRequestCount: z.number().int().nullable(),
   cssRequestCount: z.number().int().nullable(),
