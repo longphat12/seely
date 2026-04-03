@@ -105,7 +105,14 @@ async function handleSaveAudit(): Promise<ExtensionMessage> {
     }
 
     const result = await saveAudit(payload)
-    return { type: 'SAVE_AUDIT_SUCCESS', auditId: result.auditId, overallScore: result.overallScore }
+    return {
+      type: 'SAVE_AUDIT_SUCCESS',
+      auditId: result.auditId,
+      overallScore: result.overallScore,
+      projectId: result.projectId,
+      pageId: result.pageId,
+      normalizedUrl: result.normalizedUrl,
+    }
   } catch (e) {
     return { type: 'SAVE_AUDIT_ERROR', error: e instanceof Error ? e.message : 'Lưu dữ liệu thất bại' }
   }

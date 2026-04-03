@@ -48,7 +48,13 @@ export async function register(email: string, password: string, name?: string) {
 }
 
 export async function saveAudit(payload: unknown) {
-  return apiFetch<{ auditId: string; overallScore: number }>(
+  return apiFetch<{
+    auditId: string
+    overallScore: number
+    projectId: string
+    pageId: string
+    normalizedUrl: string
+  }>(
     '/api/audits',
     { method: 'POST', body: JSON.stringify(payload) },
   )

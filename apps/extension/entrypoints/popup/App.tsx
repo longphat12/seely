@@ -31,6 +31,8 @@ function App() {
   const [scanData, setScanData] = useState<ScanCacheData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [savedAuditId, setSavedAuditId] = useState<string | null>(null)
+  const [savedProjectId, setSavedProjectId] = useState<string | null>(null)
+  const [savedPageUrl, setSavedPageUrl] = useState<string | null>(null)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
 
   const [email, setEmail] = useState('')
@@ -108,11 +110,17 @@ function App() {
     const resp = await browser.runtime.sendMessage({ type: 'SAVE_AUDIT' }) as ExtensionMessage
     if (resp.type === 'SAVE_AUDIT_SUCCESS') {
       setSavedAuditId(resp.auditId)
+      setSavedProjectId(resp.projectId)
+      setSavedPageUrl(resp.normalizedUrl)
       setView('saved')
     } else if (resp.type === 'SAVE_AUDIT_ERROR') {
       setError(resp.error)
       setView('results')
     }
+  }
+
+  function openDashboard(path: string) {
+    window.open(`${import.meta.env.WXT_EXTENSION_API_BASE_URL}${path}`)
   }
 
   function getScoreColor(score: number) {
@@ -244,12 +252,21 @@ function App() {
             <button className="btn-link" onClick={handleLogout}>Đăng xuất</button>
           </div>
         </header>
-        <div className="center">
+        <div className="center saved-actions">
           <div className="success">✅ Đã lưu báo cáo!</div>
-          <button className="btn btn-secondary" onClick={() => window.open(`${import.meta.env.WXT_EXTENSION_API_BASE_URL}/audits/${savedAuditId}`)}>
+          <button className="btn btn-secondary" onClick={() => savedAuditId && openDashboard(`/audits/${savedAuditId}`)}>
             Xem trên Dashboard
           </button>
-          <button className="btn btn-primary" onClick={handleScan}>Quét lại</button>
+          <button className="btn btn-secondary" onClick={() => savedProjectId && openDashboard(`/projects/${savedProjectId}/pages`)}>
+            📄 Xem các trang đã lưu
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={() => savedPageUrl && openDashboard(`/debug-sharing?url=${encodeURIComponent(savedPageUrl)}`)}
+          >
+            🔗 Kiểm tra chia sẻ
+          </button>
+          <button className="btn btn-primary" onClick={handleScan}>🔄 Thu thập lại</button>
         </div>
       </div>
     )

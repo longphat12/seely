@@ -238,6 +238,7 @@ body {
 
 /* Actions */
 .actions { display: flex; flex-direction: column; gap: 8px; }
+.saved-actions { align-items: stretch; }
 
 /* Feedback */
 .error { background: rgba(239, 68, 68, 0.15); color: var(--danger); padding: 10px 14px; border-radius: 8px; font-size: 13px; border: 1px solid rgba(239, 68, 68, 0.3); }

@@ -1,5 +1,6 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { apiFetch } from '@/hooks/api'
 
 interface OgData {
@@ -40,11 +41,13 @@ interface DebugResult {
 type Platform = 'facebook' | 'zalo' | 'twitter'
 
 export default function DebugSharingPage() {
+  const searchParams = useSearchParams()
   const [url, setUrl] = useState('')
   const [result, setResult] = useState<DebugResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [activePlatform, setActivePlatform] = useState<Platform>('facebook')
+  const hasAutoChecked = useRef(false)
 
   async function handleCheck() {
     if (!url.trim()) return
@@ -67,6 +70,33 @@ export default function DebugSharingPage() {
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter') handleCheck()
   }
+
+  useEffect(() => {
+    const initialUrl = searchParams.get('url')?.trim()
+    if (!initialUrl) return
+
+    setUrl((currentUrl) => currentUrl || initialUrl)
+
+    if (hasAutoChecked.current) return
+    hasAutoChecked.current = true
+
+    void (async () => {
+      setError('')
+      setLoading(true)
+      setResult(null)
+      try {
+        const data = await apiFetch<DebugResult>('/api/debug-sharing', {
+          method: 'POST',
+          body: JSON.stringify({ url: initialUrl }),
+        })
+        setResult(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Có lỗi xảy ra')
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [searchParams])
 
   function getPreviewTitle(r: DebugResult, platform: Platform): string {
     if (platform === 'twitter') return r.twitter.title || r.og.title || r.title || 'Không có tiêu đề'

@@ -80,7 +80,13 @@ export async function ingestAudit(payload: AuditPayload, userId?: string) {
     },
   })
 
-  return { auditId: audit.id, overallScore: audit.overallScore }
+  return {
+    auditId: audit.id,
+    overallScore: audit.overallScore,
+    projectId: project.id,
+    pageId: page.id,
+    normalizedUrl: page.normalizedUrl,
+  }
 }
 
 export async function getAudit(auditId: string) {
