@@ -58,82 +58,145 @@ export default function AuditPage() {
         <p className="page-subtitle">{audit.url} · {timeAgo(audit.createdAt)}</p>
       </div>
 
+      {/* Status & Source Badge */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24, alignItems: 'center' }}>
+        <div style={{ padding: '6px 14px', borderRadius: 20, background: 'var(--surface-2)', border: '1px solid var(--border)', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+          {audit.source === 'EXTENSION' ? '🛠 TIỆN ÍCH' : '⚡ QUÉT NHANH'}
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+          Báo cáo lúc {new Date(audit.createdAt).toLocaleString('vi-VN')}
+        </div>
+      </div>
+
       {/* Score Cards */}
-      <div className="kpi-grid" style={{ marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 32 }}>
         {[
-          { label: 'Overall', score: audit.overallScore },
-          { label: 'On-Page', score: audit.onPageScore },
-          { label: 'Technical', score: audit.technicalScore },
-          { label: 'Content', score: audit.contentScore },
-          { label: 'Performance', score: audit.performanceScore },
-          { label: 'Social', score: audit.socialScore },
+          { label: 'Overall', score: audit.overallScore, icon: '🎯' },
+          { label: 'On-Page', score: audit.onPageScore, icon: '📄' },
+          { label: 'Technical', score: audit.technicalScore, icon: '⚙️' },
+          { label: 'Content', score: audit.contentScore, icon: '✍️' },
+          { label: 'Performance', score: audit.performanceScore, icon: '⚡' },
+          { label: 'Social', score: audit.socialScore, icon: '📱' },
         ].map((item) => (
-          <div className="kpi-card" key={item.label}>
-            <div className="kpi-label">{item.label}</div>
-            <div className={`kpi-value ${scoreColor(item.score)}`}>{item.score}</div>
+          <div className="card" key={item.label} style={{ padding: '16px', textAlign: 'center' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase' }}>{item.label}</div>
+            <div style={{ fontSize: 24, marginBottom: 4 }}>{item.icon}</div>
+            <div className={scoreColor(item.score)} style={{ fontSize: 28, fontWeight: 800 }}>{item.score}</div>
           </div>
         ))}
       </div>
 
-      {/* Metrics Summary */}
-      {m && (
-        <div className="card" style={{ marginBottom: 24 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Page Metrics</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-            {[
-              { label: 'Title Length', value: m.titleLength ?? '—' },
-              { label: 'Meta Desc Length', value: m.metaDescriptionLength ?? '—' },
-              { label: 'H1 Count', value: m.h1Count ?? '—' },
-              { label: 'H2 Count', value: m.h2Count ?? '—' },
-              { label: 'Images', value: m.imagesTotal ?? '—' },
-              { label: 'Imgs No Alt', value: m.imagesWithoutAlt ?? '—' },
-              { label: 'Word Count', value: m.wordCount ?? '—' },
-              { label: 'DOM Nodes', value: m.domNodeCount ?? '—' },
-              { label: 'Canonical', value: boolIcon(m.hasCanonical) },
-              { label: 'Viewport', value: boolIcon(m.hasViewport) },
-              { label: 'Schema', value: boolIcon(m.hasSchema) },
-              { label: 'Open Graph', value: boolIcon(m.openGraphPresent) },
-              { label: 'Twitter Card', value: boolIcon(m.twitterCardPresent) },
-            ].map((item) => (
-              <div key={item.label} style={{ padding: '10px 14px', background: 'var(--surface-2)', borderRadius: 8 }}>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{item.label}</div>
-                <div style={{ fontSize: 16, fontWeight: 600 }}>{item.value}</div>
+      {/* Primary Content Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, alignItems: 'start' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          {/* Metrics Summary */}
+          {m && (
+            <div className="card" style={{ padding: '24px' }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>🔍</span> Chỉ số trang chi tiết
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 16 }}>
+                {[
+                  { label: 'Tiêu đề', value: `${m.titleLength || 0} ký tự`, sub: m.titleLength && m.titleLength > 30 && m.titleLength < 65 ? 'Tốt' : 'Cần tối ưu' },
+                  { label: 'Mô tả meta', value: `${m.metaDescriptionLength || 0} ký tự`, sub: m.metaDescriptionLength && m.metaDescriptionLength > 120 ? 'Tốt' : 'Ngắn' },
+                  { label: 'Thẻ H1', value: m.h1Count ?? 0, sub: m.h1Count === 1 ? 'Chuẩn' : 'Sai' },
+                  { label: 'Hình ảnh', value: m.imagesTotal ?? 0, sub: `${m.imagesWithoutAlt || 0} thiếu Alt` },
+                  { label: 'Số lượng từ', value: m.wordCount ?? 0, sub: 'Nội dung' },
+                  { label: 'Canonical', value: boolIcon(m.hasCanonical), sub: 'SEO' },
+                  { label: 'Open Graph', value: boolIcon(m.openGraphPresent), sub: 'Chia sẻ' },
+                  { label: 'Twitter Card', value: boolIcon(m.twitterCardPresent), sub: 'Mạng xã hội' },
+                ].map((item) => (
+                  <div key={item.label} style={{ padding: '14px', background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4, fontWeight: 700, textTransform: 'uppercase' }}>{item.label}</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 2 }}>{item.value}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{item.sub}</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            </div>
+          )}
 
-      {/* Zalo Preview */}
-      <div className="card" style={{ marginBottom: 24, background: 'linear-gradient(135deg, #0068ff 0%, #0056d2 100%)', color: 'white', border: 'none' }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center' }}>
-          <span style={{ marginRight: 8 }}>📱</span> Zalo Sharing Preview
-        </h3>
-        <div style={{ background: 'white', borderRadius: 12, overflow: 'hidden', maxWidth: 500, boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
-          <div style={{ width: '100%', height: 260, background: '#f0f2f5', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            {audit.metrics?.ogImage ? (
-              <img src={audit.metrics.ogImage} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <div style={{ color: '#8e8e8e', textAlign: 'center', padding: 20 }}>
-                <div style={{ fontSize: 40, marginBottom: 8 }}>🖼️</div>
-                <div>No Preview Image Found</div>
+          {/* Issues by Category */}
+          {Object.entries(grouped).map(([category, issues]) => (
+            <div className="card" key={category} style={{ padding: '0', overflow: 'hidden' }}>
+              <div style={{ padding: '16px 24px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: 14, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                {category.replace('_', ' ')} ({issues.length})
               </div>
-            )}
-          </div>
-          <div style={{ padding: '12px 16px', color: '#1c1e21' }}>
-            <div style={{ fontSize: 12, color: '#65676b', marginBottom: 2, textTransform: 'uppercase', fontWeight: 600 }}>{new URL(audit.url).hostname}</div>
-            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, lineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-              {audit.title || 'No Title Provided'}
+              <div className="table-wrapper">
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <tbody>
+                    {issues.map((issue) => (
+                      <tr key={issue.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '16px 24px', width: 100 }}>
+                          <span className={severityBadge(issue.severity)} style={{ padding: '4px 8px', borderRadius: 4, fontSize: 10, fontWeight: 800 }}>
+                            {issue.severity}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px 24px' }}>
+                          <div style={{ fontWeight: 600, marginBottom: 4 }}>{issue.title}</div>
+                          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>{issue.message}</div>
+                          <div style={{ fontSize: 12, color: 'var(--primary-light)', background: 'rgba(99,102,241,0.05)', padding: '8px 12px', borderRadius: 6, borderLeft: '3px solid var(--primary)' }}>
+                            💡 {issue.recommendation}
+                          </div>
+                        </td>
+                        <td style={{ padding: '16px 24px', width: 140 }}>
+                          <select
+                            value={issue.status}
+                            onChange={(e) => statusMutation.mutate({ issueId: issue.id, status: e.target.value })}
+                            style={{ width: '100%', padding: '6px', borderRadius: 6, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: 12 }}
+                          >
+                            <option value="OPEN">🔴 Open</option>
+                            <option value="FIXED">🟢 Fixed</option>
+                            <option value="IGNORED">⚪ Ignored</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div style={{ fontSize: 14, color: '#65676b', lineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-              {audit.metrics?.metaDescription || 'No description provided for this page. Zalo will show the page URL or a snippet of text from the content.'}
+          ))}
+        </div>
+
+        {/* Sidebar: Social Preview */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div className="card" style={{ padding: '24px', position: 'sticky', top: 24 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 20 }}>📲 Xem trước chia sẻ</h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {/* FB/Zalo Style */}
+              <div style={{ background: 'white', borderRadius: 8, overflow: 'hidden', border: '1px solid #dddfe2', color: '#1c1e21' }}>
+                <div style={{ width: '100%', aspectRatio: '1.91/1', background: '#f0f2f5', overflow: 'hidden' }}>
+                  {audit.metrics?.ogImage ? (
+                    <img src={audit.metrics.ogImage} alt="OG" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e8e', fontSize: 12 }}>No Image</div>
+                  )}
+                </div>
+                <div style={{ padding: 12, borderTop: '1px solid #dddfe2' }}>
+                  <div style={{ fontSize: 11, color: '#65676b', textTransform: 'uppercase', marginBottom: 4 }}>{new URL(audit.url).hostname}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{audit.title || 'No Title'}</div>
+                  <div style={{ fontSize: 13, color: '#65676b', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{audit.metrics?.metaDescription || 'No description...'}</div>
+                </div>
+              </div>
+
+              <div style={{ padding: '16px', background: 'rgba(99,102,241,0.05)', borderRadius: 12, border: '1px solid rgba(99,102,241,0.1)' }}>
+                <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--primary)' }}>Phân tích Open Graph</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Hình ảnh OG:</span>
+                    <span>{audit.metrics?.ogImage ? '✅ Có' : '❌ Thiếu'}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Mô tả Social:</span>
+                    <span>{audit.metrics?.metaDescription ? '✅ Có' : '❌ Thiếu'}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        <p style={{ marginTop: 16, fontSize: 13, opacity: 0.9 }}>
-          💡 <strong>Tip:</strong> Zalo favors images with a 1.91:1 ratio (e.g., 1200x630px). 
-          Ensure your image is hosted on an absolute URL and is publicly accessible.
-        </p>
       </div>
 
       {/* Issues by Category */}

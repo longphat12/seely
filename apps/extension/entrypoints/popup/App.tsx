@@ -1,10 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { ScanCacheData, ExtensionMessage } from '@/lib/message-types'
-import { isLoggedIn, setToken, removeToken } from '@/lib/auth'
-import { login as apiLogin, register as apiRegister } from '@/lib/api-client'
+import { isLoggedIn, removeToken, setToken } from '@/lib/auth'
+import {
+  getRecentSavedPages,
+  login as apiLogin,
+  register as apiRegister,
+  type SavedPageItem,
+} from '@/lib/api-client'
 import './style.css'
 
-type View = 'loading' | 'login' | 'register' | 'scan' | 'results' | 'saving' | 'saved'
+type View = 'loading' | 'login' | 'register' | 'scan' | 'results' | 'saving'
+type Panel = 'score' | 'saved'
 
 const SunIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon-sun">
@@ -28,11 +34,12 @@ const MoonIcon = () => (
 
 function App() {
   const [view, setView] = useState<View>('loading')
+  const [activePanel, setActivePanel] = useState<Panel>('score')
   const [scanData, setScanData] = useState<ScanCacheData | null>(null)
+  const [savedPages, setSavedPages] = useState<SavedPageItem[]>([])
+  const [savedPagesLoading, setSavedPagesLoading] = useState(false)
+  const [savedPagesLoaded, setSavedPagesLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [savedAuditId, setSavedAuditId] = useState<string | null>(null)
-  const [savedProjectId, setSavedProjectId] = useState<string | null>(null)
-  const [savedPageUrl, setSavedPageUrl] = useState<string | null>(null)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
 
   const [email, setEmail] = useState('')
@@ -40,12 +47,18 @@ function App() {
   const [name, setName] = useState('')
 
   useEffect(() => {
-    checkState()
+    void checkState()
   }, [])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    if (activePanel === 'saved' && view !== 'login' && view !== 'register') {
+      void loadSavedPages()
+    }
+  }, [activePanel, view])
 
   async function checkState() {
     const loggedIn = await isLoggedIn()
@@ -53,12 +66,30 @@ function App() {
       setView('login')
       return
     }
+
     const resp = await browser.runtime.sendMessage({ type: 'GET_SCAN_DATA' }) as ExtensionMessage
     if (resp.type === 'SCAN_DATA' && resp.payload) {
       setScanData(resp.payload)
       setView('results')
-    } else {
-      setView('scan')
+      return
+    }
+
+    setView('scan')
+  }
+
+  async function loadSavedPages(force = false) {
+    if (savedPagesLoading) return
+    if (savedPagesLoaded && !force) return
+
+    setSavedPagesLoading(true)
+    try {
+      const pages = await getRecentSavedPages()
+      setSavedPages(pages)
+      setSavedPagesLoaded(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không tải được trang đã lưu')
+    } finally {
+      setSavedPagesLoading(false)
     }
   }
 
@@ -68,7 +99,8 @@ function App() {
     try {
       const result = await apiLogin(email, password)
       await setToken(result.token)
-      setView('scan')
+      setActivePanel('score')
+      await checkState()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Đăng nhập thất bại')
     }
@@ -80,7 +112,8 @@ function App() {
     try {
       const result = await apiRegister(email, password, name)
       await setToken(result.token)
-      setView('scan')
+      setActivePanel('score')
+      await checkState()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Đăng ký thất bại')
     }
@@ -88,6 +121,11 @@ function App() {
 
   async function handleLogout() {
     await removeToken()
+    setScanData(null)
+    setSavedPages([])
+    setSavedPagesLoaded(false)
+    setActivePanel('score')
+    setError(null)
     setView('login')
   }
 
@@ -97,6 +135,7 @@ function App() {
     const resp = await browser.runtime.sendMessage({ type: 'REQUEST_SCAN' }) as ExtensionMessage
     if (resp.type === 'SCAN_DATA' && resp.payload) {
       setScanData(resp.payload)
+      setActivePanel('score')
       setView('results')
     } else if (resp.type === 'SCAN_ERROR') {
       setError(resp.error)
@@ -109,10 +148,9 @@ function App() {
     setView('saving')
     const resp = await browser.runtime.sendMessage({ type: 'SAVE_AUDIT' }) as ExtensionMessage
     if (resp.type === 'SAVE_AUDIT_SUCCESS') {
-      setSavedAuditId(resp.auditId)
-      setSavedProjectId(resp.projectId)
-      setSavedPageUrl(resp.normalizedUrl)
-      setView('saved')
+      setActivePanel('saved')
+      await loadSavedPages(true)
+      setView(scanData ? 'results' : 'scan')
     } else if (resp.type === 'SAVE_AUDIT_ERROR') {
       setError(resp.error)
       setView('results')
@@ -131,22 +169,26 @@ function App() {
 
   function getSeverityLabel(severity: string) {
     const labels: Record<string, string> = {
-      CRITICAL: 'NGHIÊM TRỌNG', HIGH: 'CAO',
-      MEDIUM: 'TRUNG BÌNH', LOW: 'THẤP',
+      CRITICAL: 'NGHIÊM TRỌNG',
+      HIGH: 'CAO',
+      MEDIUM: 'TRUNG BÌNH',
+      LOW: 'THẤP',
     }
     return labels[severity] || severity
   }
 
   function getSeverityClass(severity: string) {
     const map: Record<string, string> = {
-      CRITICAL: 'severity-critical', HIGH: 'severity-high',
-      MEDIUM: 'severity-medium', LOW: 'severity-low',
+      CRITICAL: 'severity-critical',
+      HIGH: 'severity-high',
+      MEDIUM: 'severity-medium',
+      LOW: 'severity-low',
     }
     return map[severity] || ''
   }
 
   const ThemeToggle = () => (
-    <button className="theme-toggle-btn" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} aria-label="Toggle Theme">
+    <button className="theme-toggle-btn" onClick={() => setTheme((t) => t === 'dark' ? 'light' : 'dark')} aria-label="Toggle Theme">
       <div className="theme-icon">
         <MoonIcon />
         <SunIcon />
@@ -154,7 +196,165 @@ function App() {
     </button>
   )
 
-  // ─── Login View ───
+  const HeaderActions = () => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <ThemeToggle />
+      <button className="btn-link" onClick={handleLogout}>Đăng xuất</button>
+    </div>
+  )
+
+  const PanelTabs = () => (
+    <div className="panel-tabs">
+      <button className={`panel-tab ${activePanel === 'score' ? 'active' : ''}`} onClick={() => setActivePanel('score')}>
+        Điểm SEO
+      </button>
+      <button className={`panel-tab ${activePanel === 'saved' ? 'active' : ''}`} onClick={() => setActivePanel('saved')}>
+        Trang đã lưu
+      </button>
+    </div>
+  )
+
+  function renderSavedPagesPanel() {
+    return (
+      <div className="saved-pages-panel">
+        <div className="section-heading">
+          <div>
+            <h2>Trang đã lưu</h2>
+            <p>Mở lại nhanh các trang bạn vừa lưu trong dự án.</p>
+          </div>
+          <button className="btn btn-ghost" onClick={() => void loadSavedPages(true)}>
+            Làm mới
+          </button>
+        </div>
+
+        {savedPagesLoading && (
+          <div className="center">
+            <div className="spinner" />
+            <p>Đang tải các trang đã lưu...</p>
+          </div>
+        )}
+
+        {!savedPagesLoading && savedPages.length === 0 && (
+          <div className="empty-card">
+            <p>Chưa có trang nào được lưu.</p>
+            <button className="btn btn-primary" onClick={handleScan}>Quét trang hiện tại</button>
+          </div>
+        )}
+
+        {!savedPagesLoading && savedPages.length > 0 && (
+          <div className="saved-pages-list">
+            {savedPages.map((page) => (
+              <div key={page.pageId} className="saved-page-card">
+                <div className="saved-page-head">
+                  <div>
+                    <div className="saved-page-path">{page.path || '/'}</div>
+                    <div className="saved-page-domain">{page.projectDomain}</div>
+                  </div>
+                  <div
+                    className="saved-score-badge"
+                    style={{ color: page.latestAuditScore === null ? 'var(--text-muted)' : getScoreColor(page.latestAuditScore) }}
+                  >
+                    {page.latestAuditScore ?? '—'}
+                  </div>
+                </div>
+                <div className="saved-page-url">{page.normalizedUrl}</div>
+                <div className="saved-page-project">{page.projectName}</div>
+                <div className="saved-page-actions">
+                  <button className="btn btn-secondary" onClick={() => openDashboard(`/pages/${page.pageId}`)}>
+                    Xem trang
+                  </button>
+                  <button className="btn btn-secondary" onClick={() => openDashboard(`/projects/${page.projectId}`)}>
+                    Mở dự án
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  function renderScorePanel() {
+    if (view === 'loading' || view === 'saving') {
+      return (
+        <div className="center">
+          <div className="spinner" />
+          <p>{view === 'loading' ? 'Đang quét trang...' : 'Đang lưu báo cáo...'}</p>
+        </div>
+      )
+    }
+
+    if (view === 'scan' || !scanData) {
+      return (
+        <div className="center">
+          <p>Đánh giá chất lượng SEO trang này</p>
+          <button className="btn btn-primary" onClick={handleScan}>Quét trang</button>
+        </div>
+      )
+    }
+
+    const { score, issues } = scanData
+    const topIssues = issues.slice(0, 5)
+
+    return (
+      <>
+        <div className="score-section">
+          <div className="score-ring" style={{ '--score-color': getScoreColor(score.overall) } as React.CSSProperties}>
+            <span className="score-value">{score.overall}</span>
+            <span className="score-label">Tổng quan</span>
+          </div>
+          <div className="score-breakdown">
+            <div className="score-item">
+              <span className="score-cat">Trang</span>
+              <span style={{ color: getScoreColor(score.onPage) }}>{score.onPage}</span>
+            </div>
+            <div className="score-item">
+              <span className="score-cat">Kỹ thuật</span>
+              <span style={{ color: getScoreColor(score.technical) }}>{score.technical}</span>
+            </div>
+            <div className="score-item">
+              <span className="score-cat">Nội dung</span>
+              <span style={{ color: getScoreColor(score.content) }}>{score.content}</span>
+            </div>
+            <div className="score-item">
+              <span className="score-cat">Tốc độ</span>
+              <span style={{ color: getScoreColor(score.performance) }}>{score.performance}</span>
+            </div>
+          </div>
+        </div>
+
+        {topIssues.length > 0 && (
+          <div className="issues-section">
+            <h3>Lỗi cần sửa ({issues.length} lỗi)</h3>
+            <ul className="issues-list">
+              {topIssues.map((issue, index) => (
+                <li key={index} className="issue-item">
+                  <span className={`severity-badge ${getSeverityClass(issue.severity)}`}>
+                    {getSeverityLabel(issue.severity)}
+                  </span>
+                  <span className="issue-title">{issue.title}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {issues.length === 0 && (
+          <div className="center success">🎉 Không tìm thấy lỗi nào!</div>
+        )}
+
+        <div className="actions">
+          <button className="btn btn-primary" onClick={handleSave}>💾 Lưu báo cáo</button>
+          <button className="btn btn-secondary" onClick={() => openDashboard(`/debug-sharing?url=${encodeURIComponent(scanData.url)}`)}>
+            🔗 Kiểm tra chia sẻ
+          </button>
+          <button className="btn btn-secondary" onClick={handleScan}>🔄 Quét lại</button>
+        </div>
+      </>
+    )
+  }
+
   if (view === 'login') {
     return (
       <div className="popup">
@@ -170,8 +370,8 @@ function App() {
           <button type="submit" className="btn btn-primary">Đăng nhập</button>
         </form>
         <div className="auth-switch">
-          Chưa có tài khoản? 
-          <a href="#" className="auth-switch-btn" onClick={(e) => { e.preventDefault(); setView('register'); setError(null); }}>
+          Chưa có tài khoản?
+          <a href="#" className="auth-switch-btn" onClick={(e) => { e.preventDefault(); setView('register'); setError(null) }}>
             Đăng ký ngay
           </a>
         </div>
@@ -179,7 +379,6 @@ function App() {
     )
   }
 
-  // ─── Register View ───
   if (view === 'register') {
     return (
       <div className="popup">
@@ -196,8 +395,8 @@ function App() {
           <button type="submit" className="btn btn-primary">Đăng ký</button>
         </form>
         <div className="auth-switch">
-          Đã có tài khoản? 
-          <a href="#" className="auth-switch-btn" onClick={(e) => { e.preventDefault(); setView('login'); setError(null); }}>
+          Đã có tài khoản?
+          <a href="#" className="auth-switch-btn" onClick={(e) => { e.preventDefault(); setView('login'); setError(null) }}>
             Đăng nhập
           </a>
         </div>
@@ -205,145 +404,18 @@ function App() {
     )
   }
 
-  // ─── Loading/Saving View ───
-  if (view === 'loading' || view === 'saving') {
-    return (
-      <div className="popup">
-        <div style={{ position: 'absolute', top: 16, right: 16 }}><ThemeToggle /></div>
-        <header className="header center-header">
-          <h1>🔍 Seely</h1>
-        </header>
-        <div className="center">
-          <div className="spinner" />
-          <p>{view === 'loading' ? 'Đang quét trang...' : 'Đang lưu báo cáo...'}</p>
-        </div>
-      </div>
-    )
-  }
-
-  // ─── Scan View (no data yet) ───
-  if (view === 'scan') {
-    return (
-      <div className="popup">
-        <header className="header">
-          <h1>🔍 Seely</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <ThemeToggle />
-            <button className="btn-link" onClick={handleLogout}>Đăng xuất</button>
-          </div>
-        </header>
-        {error && <div className="error">{error}</div>}
-        <div className="center">
-          <p>Đánh giá chất lượng SEO trang này</p>
-          <button className="btn btn-primary" onClick={handleScan}>Quét trang</button>
-        </div>
-      </div>
-    )
-  }
-
-  // ─── Saved View ───
-  if (view === 'saved') {
-    return (
-      <div className="popup">
-        <header className="header">
-          <h1>🔍 Seely</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <ThemeToggle />
-            <button className="btn-link" onClick={handleLogout}>Đăng xuất</button>
-          </div>
-        </header>
-        <div className="center saved-actions">
-          <div className="success">✅ Đã lưu báo cáo!</div>
-          <button className="btn btn-secondary" onClick={() => savedAuditId && openDashboard(`/audits/${savedAuditId}`)}>
-            Xem trên Dashboard
-          </button>
-          <button className="btn btn-secondary" onClick={() => savedProjectId && openDashboard(`/projects/${savedProjectId}/pages`)}>
-            📄 Xem các trang đã lưu
-          </button>
-          <button
-            className="btn btn-secondary"
-            onClick={() => savedPageUrl && openDashboard(`/debug-sharing?url=${encodeURIComponent(savedPageUrl)}`)}
-          >
-            🔗 Kiểm tra chia sẻ
-          </button>
-          <button className="btn btn-primary" onClick={handleScan}>🔄 Thu thập lại</button>
-        </div>
-      </div>
-    )
-  }
-
-  // ─── Results View ───
-  if (!scanData) return null
-  const { score, issues } = scanData
-  const topIssues = issues.slice(0, 5)
-
   return (
     <div className="popup">
       <header className="header">
         <h1>🔍 Seely</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <ThemeToggle />
-          <button className="btn-link" onClick={handleLogout}>Đăng xuất</button>
-        </div>
+        <HeaderActions />
       </header>
 
-      {/* Score Ring */}
-      <div className="score-section">
-        <div className="score-ring" style={{ '--score-color': getScoreColor(score.overall) } as React.CSSProperties}>
-          <span className="score-value">{score.overall}</span>
-          <span className="score-label">Tổng quan</span>
-        </div>
-        <div className="score-breakdown">
-          <div className="score-item">
-            <span className="score-cat">Trang (On-Page)</span>
-            <span style={{ color: getScoreColor(score.onPage) }}>{score.onPage}</span>
-          </div>
-          <div className="score-item">
-            <span className="score-cat">Kỹ thuật (Tech)</span>
-            <span style={{ color: getScoreColor(score.technical) }}>{score.technical}</span>
-          </div>
-          <div className="score-item">
-            <span className="score-cat">Nội dung (Content)</span>
-            <span style={{ color: getScoreColor(score.content) }}>{score.content}</span>
-          </div>
-          <div className="score-item">
-            <span className="score-cat">Tốc độ (Speed)</span>
-            <span style={{ color: getScoreColor(score.performance) }}>{score.performance}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Issues */}
-      {topIssues.length > 0 && (
-        <div className="issues-section">
-          <h3>Lỗi cần sửa ({issues.length} lỗi)</h3>
-          <ul className="issues-list">
-            {topIssues.map((issue, i) => (
-              <li key={i} className="issue-item">
-                <span className={`severity-badge ${getSeverityClass(issue.severity)}`}>
-                  {getSeverityLabel(issue.severity)}
-                </span>
-                <span className="issue-title">{issue.title}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {issues.length === 0 && (
-        <div className="center success">🎉 Không tìm thấy lỗi nào!</div>
-      )}
+      <PanelTabs />
 
       {error && <div className="error">{error}</div>}
 
-      {/* Actions */}
-      <div className="actions">
-        <button className="btn btn-primary" onClick={handleSave}>💾 Lưu báo cáo</button>
-        <button className="btn btn-secondary" onClick={handleScan}>🔄 Quét lại</button>
-        <button className="btn btn-ghost" onClick={() => window.open(`${import.meta.env.WXT_EXTENSION_API_BASE_URL}/projects`)}>
-          📊 Bảng phân tích
-        </button>
-      </div>
+      {activePanel === 'score' ? renderScorePanel() : renderSavedPagesPanel()}
     </div>
   )
 }

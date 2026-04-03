@@ -20,36 +20,70 @@ export default function ProjectPagesPage() {
   return (
     <>
       <div className="page-header">
-        <Link href={`/projects/${projectId}`} style={{ fontSize: 13, color: 'var(--text-muted)' }}>← Back to project</Link>
-        <h1 className="page-title">Pages</h1>
+        <Link href={`/projects/${projectId}`} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)', marginBottom: 12, fontWeight: 600 }}>
+          <span>←</span> Quay lại dự án
+        </Link>
+        <h1 className="page-title">Danh sách các trang đã quét</h1>
+        <p className="page-subtitle">Quản lý và xem lịch sử kiểm tra của từng trang con trong dự án</p>
       </div>
 
-      {isLoading && <p style={{ color: 'var(--text-muted)' }}>Loading...</p>}
+      {isLoading && (
+        <div className="debug-loading" style={{ marginTop: 40 }}>
+          <div className="debug-loading-pulse" />
+          <p>Đang tải danh sách trang...</p>
+        </div>
+      )}
 
       {pages && pages.length === 0 && (
-        <div className="empty-state">
-          <p>No pages audited yet. Scan pages with the Seely extension.</p>
+        <div className="card empty-state" style={{ padding: '80px 24px' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>📄</div>
+          <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>Chưa có trang nào được quét</h3>
+          <p style={{ color: 'var(--text-muted)', maxWidth: 400, margin: '0 auto' }}>
+            Sử dụng công cụ Quét nhanh hoặc Tiện ích Seely để bắt đầu thu thập dữ liệu về các trang web của bạn.
+          </p>
         </div>
       )}
 
       {pages && pages.length > 0 && (
-        <div className="card table-wrapper">
-          <table>
-            <thead>
-              <tr><th>Path</th><th>URL</th><th>First Seen</th><th>Last Audit</th><th></th></tr>
-            </thead>
-            <tbody>
-              {pages.map((p) => (
-                <tr key={p.id}>
-                  <td style={{ fontWeight: 500 }}>{p.path}</td>
-                  <td style={{ color: 'var(--text-muted)', fontSize: 12, maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.normalizedUrl}</td>
-                  <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{timeAgo(p.firstSeenAt)}</td>
-                  <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{timeAgo(p.lastSeenAt)}</td>
-                  <td><Link href={`/pages/${p.id}`} className="btn btn-sm btn-secondary">View</Link></td>
+        <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+          <div className="table-wrapper">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--surface-2)' }}>
+                  <th style={{ padding: '14px 24px', borderBottom: '1px solid var(--border)' }}>ĐƯỜNG DẪN (PATH)</th>
+                  <th style={{ padding: '14px 24px', borderBottom: '1px solid var(--border)' }}>URL ĐẦY ĐỦ</th>
+                  <th style={{ padding: '14px 24px', borderBottom: '1px solid var(--border)' }}>THẤY LẦN ĐẦU</th>
+                  <th style={{ padding: '14px 24px', borderBottom: '1px solid var(--border)' }}>LẦN CUỐI QUÉT</th>
+                  <th style={{ padding: '14px 24px', borderBottom: '1px solid var(--border)' }}></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {pages.map((p) => (
+                  <tr key={p.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }}>
+                    <td style={{ padding: '16px 24px', fontWeight: 700, color: 'var(--text)' }}>
+                      <code style={{ background: 'var(--surface-2)', padding: '4px 8px', borderRadius: 4, color: 'var(--primary-light)', fontSize: 13 }}>
+                        {p.path}
+                      </code>
+                    </td>
+                    <td style={{ padding: '16px 24px', color: 'var(--text-muted)', fontSize: 13, maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {p.normalizedUrl}
+                    </td>
+                    <td style={{ padding: '16px 24px', color: 'var(--text-muted)', fontSize: 13 }}>
+                      {timeAgo(p.firstSeenAt)}
+                    </td>
+                    <td style={{ padding: '16px 24px', color: 'var(--text-muted)', fontSize: 13 }}>
+                      {timeAgo(p.lastSeenAt)}
+                    </td>
+                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                      <Link href={`/pages/${p.id}`} className="btn btn-sm btn-secondary" style={{ borderRadius: 6 }}>
+                        Chi tiết
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </>

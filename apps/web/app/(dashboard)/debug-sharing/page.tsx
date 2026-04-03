@@ -45,6 +45,7 @@ function DebugSharingPageContent() {
   const [url, setUrl] = useState('')
   const [result, setResult] = useState<DebugResult | null>(null)
   const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [activePlatform, setActivePlatform] = useState<Platform>('facebook')
   const hasAutoChecked = useRef(false)
@@ -64,6 +65,22 @@ function DebugSharingPageContent() {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleSave() {
+    if (!result?.fetchedUrl) return
+    setSaving(true)
+    try {
+      await apiFetch('/api/audits/manual', {
+        method: 'POST',
+        body: JSON.stringify({ url: result.fetchedUrl })
+      })
+      alert('Đã lưu thành công vào Dự án!')
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Lỗi khi lưu')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -137,29 +154,43 @@ function DebugSharingPageContent() {
       </div>
 
       {/* ── Search Bar ── */}
-      <div className="debug-search-bar">
-        <div className="debug-search-icon">🔍</div>
-        <input
-          id="debug-url-input"
-          type="text"
-          className="debug-search-input"
-          placeholder="Nhập URL cần kiểm tra (vd: https://example.com)"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          onKeyDown={handleKeyDown}
-        />
-        <button
-          id="debug-check-btn"
-          className="debug-search-btn"
-          onClick={handleCheck}
-          disabled={loading || !url.trim()}
-        >
-          {loading ? (
-            <span className="debug-spinner" />
-          ) : (
-            'Kiểm tra'
-          )}
-        </button>
+      <div className="card" style={{ padding: '24px', borderRadius: 12, marginBottom: 32 }}>
+        <label style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8, display: 'block', fontWeight: 600 }}>
+          NHẬP URL ĐỂ KIỂM TRA HIỂN THỊ CHIA SẺ
+        </label>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', opacity: 0.5, fontSize: 16 }}>🔍</span>
+            <input
+              id="debug-url-input"
+              type="text"
+              style={{ 
+                width: '100%', 
+                padding: '12px 16px 12px 44px', 
+                borderRadius: 8, 
+                border: '1px solid var(--border)', 
+                outline: 'none', 
+                background: 'var(--surface)', 
+                color: 'var(--text)',
+                fontSize: 14,
+                transition: 'border-color 0.2s'
+              }}
+              placeholder="https://example.com"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+          </div>
+          <button
+            id="debug-check-btn"
+            className="btn btn-primary"
+            style={{ height: 44, padding: '0 24px', fontWeight: 600 }}
+            onClick={handleCheck}
+            disabled={loading || !url.trim()}
+          >
+            {loading ? <span className="debug-spinner" /> : '🚀 Kiểm tra'}
+          </button>
+        </div>
       </div>
 
       {/* ── Error ── */}
@@ -179,28 +210,55 @@ function DebugSharingPageContent() {
 
       {/* ── Results ── */}
       {result && !loading && (
-        <div className="debug-results">
+        <div className="debug-results animate-in">
           {/* Status Banner */}
-          <div className={`debug-status ${result.statusCode >= 200 && result.statusCode < 400 ? 'debug-status-ok' : 'debug-status-err'}`}>
-            <div className="debug-status-left">
-              <span className="debug-status-code">{result.statusCode}</span>
-              <span className="debug-status-url">{result.fetchedUrl}</span>
+          <div className={`card ${result.statusCode >= 200 && result.statusCode < 400 ? 'status-ok' : 'status-err'}`} style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            padding: '16px 24px',
+            marginBottom: 24,
+            borderLeft: `4px solid ${result.statusCode >= 200 && result.statusCode < 400 ? '#10b981' : '#ef4444'}`,
+            background: 'var(--surface)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ 
+                background: result.statusCode >= 200 && result.statusCode < 400 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                color: result.statusCode >= 200 && result.statusCode < 400 ? '#10b981' : '#ef4444',
+                padding: '4px 12px',
+                borderRadius: 6,
+                fontWeight: 700,
+                fontSize: 16
+              }}>
+                {result.statusCode}
+              </div>
+              <div style={{ overflow: 'hidden' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>URL ĐÃ KIỂM TRA</div>
+                <div style={{ fontSize: 15, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '500px' }}>
+                  {result.fetchedUrl}
+                </div>
+              </div>
             </div>
-            <button className="debug-recrawl-btn" onClick={handleCheck} title="Thu thập lại">
-              🔄 Thu thập lại
-            </button>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="btn btn-secondary" onClick={handleCheck} title="Thu thập lại">
+                🔄 Thu thập lại
+              </button>
+              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+                {saving ? '⏳ Đang lưu...' : '💾 Lưu lại dự án'}
+              </button>
+            </div>
           </div>
 
           {/* ── Warnings ── */}
           {result.warnings.length > 0 && (
-            <div className="debug-warnings-card">
-              <h3 className="debug-section-title">
-                <span>⚠️</span> Cảnh báo ({result.warnings.length})
+            <div className="card" style={{ padding: '24px', marginBottom: 24, borderLeft: '4px solid #f59e0b' }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ color: '#f59e0b' }}>⚠️</span> Cảnh báo ({result.warnings.length})
               </h3>
-              <div className="debug-warnings-list">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
                 {result.warnings.map((w, i) => (
-                  <div key={i} className="debug-warning-item">
-                    <span className="debug-warning-dot" />
+                  <div key={i} style={{ display: 'flex', gap: 10, fontSize: 14, color: 'var(--text-muted)', background: 'var(--surface-2)', padding: '10px 14px', borderRadius: 8 }}>
+                    <span style={{ color: '#f59e0b', marginTop: 2 }}>•</span>
                     <span>{w}</span>
                   </div>
                 ))}
@@ -209,15 +267,29 @@ function DebugSharingPageContent() {
           )}
 
           {/* ── Platform Preview Tabs ── */}
-          <div className="debug-preview-card">
-            <h3 className="debug-section-title">
+          <div className="card" style={{ padding: '24px', marginBottom: 24 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>👁️</span> Xem trước khi chia sẻ
             </h3>
-            <div className="debug-platform-tabs">
+            <div style={{ display: 'flex', gap: 8, marginBottom: 24, padding: 4, background: 'var(--surface-2)', borderRadius: 10, width: 'fit-content' }}>
               {platforms.map((p) => (
                 <button
                   key={p.key}
-                  className={`debug-platform-tab ${activePlatform === p.key ? 'active' : ''}`}
+                  style={{
+                    padding: '8px 20px',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: activePlatform === p.key ? 'var(--surface)' : 'transparent',
+                    color: activePlatform === p.key ? 'var(--primary)' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    transition: 'all 0.2s',
+                    boxShadow: activePlatform === p.key ? '0 2px 8px rgba(0,0,0,0.1)' : 'none'
+                  }}
                   onClick={() => setActivePlatform(p.key)}
                 >
                   <span>{p.icon}</span>
@@ -292,15 +364,18 @@ function DebugSharingPageContent() {
           </div>
 
           {/* ── Metadata Table ── */}
-          <div className="debug-meta-card">
-            <h3 className="debug-section-title">
-              <span>📋</span> Thông tin metadata
+          <div className="card" style={{ padding: '24px', marginBottom: 24 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>📋</span> Thông tin metadata chi tiết
             </h3>
-            <div className="debug-meta-grid">
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 32 }}>
               {/* Open Graph */}
-              <div className="debug-meta-section">
-                <h4 className="debug-meta-section-title">Open Graph</h4>
-                <div className="debug-meta-table">
+              <div>
+                <h4 style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
+                  Open Graph (Facebook/Zalo)
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {[
                     { label: 'og:title', value: result.og.title },
                     { label: 'og:description', value: result.og.description },
@@ -309,79 +384,111 @@ function DebugSharingPageContent() {
                     { label: 'og:site_name', value: result.og.siteName },
                     { label: 'og:type', value: result.og.type },
                   ].map((row) => (
-                    <div key={row.label} className="debug-meta-row">
-                      <div className="debug-meta-key">{row.label}</div>
-                      <div className={`debug-meta-value ${!row.value ? 'debug-meta-missing' : ''}`}>
-                        {row.value || '⚠️ Không có'}
+                    <div key={row.label}>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 4 }}>{row.label}</div>
+                      <div style={{ 
+                        fontSize: 13, 
+                        padding: '8px 12px', 
+                        background: row.value ? 'var(--surface-2)' : 'rgba(239, 68, 68, 0.05)', 
+                        borderRadius: 6,
+                        border: `1px solid ${row.value ? 'var(--border)' : 'rgba(239, 68, 68, 0.1)'}`,
+                        color: row.value ? 'var(--text)' : '#ef4444',
+                        wordBreak: 'break-all',
+                        fontFamily: 'monospace'
+                      }}>
+                        {row.value || '⚠️ Không tìm thấy'}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Twitter Card */}
-              <div className="debug-meta-section">
-                <h4 className="debug-meta-section-title">Twitter Card</h4>
-                <div className="debug-meta-table">
-                  {[
-                    { label: 'twitter:card', value: result.twitter.card },
-                    { label: 'twitter:title', value: result.twitter.title },
-                    { label: 'twitter:description', value: result.twitter.description },
-                    { label: 'twitter:image', value: result.twitter.image },
-                  ].map((row) => (
-                    <div key={row.label} className="debug-meta-row">
-                      <div className="debug-meta-key">{row.label}</div>
-                      <div className={`debug-meta-value ${!row.value ? 'debug-meta-missing' : ''}`}>
-                        {row.value || '⚠️ Không có'}
+              {/* Twitter & Basic */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+                <section>
+                  <h4 style={{ fontSize: 13, color: '#1d9bf0', fontWeight: 700, textTransform: 'uppercase', marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
+                    Twitter / X Card
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {[
+                      { label: 'twitter:card', value: result.twitter.card },
+                      { label: 'twitter:title', value: result.twitter.title },
+                      { label: 'twitter:image', value: result.twitter.image },
+                    ].map((row) => (
+                      <div key={row.label}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 4 }}>{row.label}</div>
+                        <div style={{ 
+                          fontSize: 13, 
+                          padding: '8px 12px', 
+                          background: row.value ? 'var(--surface-2)' : 'rgba(239, 68, 68, 0.05)', 
+                          borderRadius: 6,
+                          border: `1px solid ${row.value ? 'var(--border)' : 'rgba(239, 68, 68, 0.1)'}`,
+                          color: row.value ? 'var(--text)' : '#ef4444',
+                          wordBreak: 'break-all',
+                          fontFamily: 'monospace'
+                        }}>
+                          {row.value || '⚠️ Không tìm thấy'}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                    ))}
+                  </div>
+                </section>
 
-              {/* Basic Meta */}
-              <div className="debug-meta-section">
-                <h4 className="debug-meta-section-title">Thông tin cơ bản</h4>
-                <div className="debug-meta-table">
-                  {[
-                    { label: '<title>', value: result.title },
-                    { label: 'meta description', value: result.description },
-                    { label: 'favicon', value: result.favicon },
-                  ].map((row) => (
-                    <div key={row.label} className="debug-meta-row">
-                      <div className="debug-meta-key">{row.label}</div>
-                      <div className={`debug-meta-value ${!row.value ? 'debug-meta-missing' : ''}`}>
-                        {row.value || '⚠️ Không có'}
+                <section>
+                  <h4 style={{ fontSize: 13, color: 'var(--success)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
+                    HTML Basic Tags
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {[
+                      { label: '<title>', value: result.title },
+                      { label: 'meta explanation', value: result.description },
+                      { label: 'favicon', value: result.favicon },
+                    ].map((row) => (
+                      <div key={row.label}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 4 }}>{row.label}</div>
+                        <div style={{ 
+                          fontSize: 13, 
+                          padding: '8px 12px', 
+                          background: row.value ? 'var(--surface-2)' : 'rgba(239, 68, 68, 0.05)', 
+                          borderRadius: 6,
+                          border: `1px solid ${row.value ? 'var(--border)' : 'rgba(239, 68, 68, 0.1)'}`,
+                          color: row.value ? 'var(--text)' : '#ef4444',
+                          wordBreak: 'break-all'
+                        }}>
+                          {row.value || '⚠️ Không tìm thấy'}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </section>
               </div>
             </div>
           </div>
 
           {/* ── All Meta Tags ── */}
           {result.allMeta.length > 0 && (
-            <details className="debug-all-meta">
-              <summary className="debug-all-meta-summary">
-                📑 Tất cả thẻ meta ({result.allMeta.length})
+            <details className="card" style={{ padding: '0', overflow: 'hidden', cursor: 'pointer', border: '1px solid var(--border)' }}>
+              <summary style={{ padding: '16px 24px', fontWeight: 700, fontSize: 14, color: 'var(--text)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                📑 Xem tất cả thẻ meta ẩn ({result.allMeta.length})
               </summary>
-              <div className="debug-all-meta-content">
-                <div className="table-wrapper">
-                  <table>
+              <div style={{ padding: '20px', background: 'var(--surface)' }}>
+                <div className="table-wrapper" style={{ borderRadius: 8, border: '1px solid var(--border)' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr>
-                        <th>Property / Name</th>
-                        <th>Content</th>
+                      <tr style={{ background: 'var(--surface-2)' }}>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, color: 'var(--text-muted)' }}>THUỘC TÍNH</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, color: 'var(--text-muted)' }}>NỘI DUNG</th>
                       </tr>
                     </thead>
                     <tbody>
                       {result.allMeta.map((m, i) => (
-                        <tr key={i}>
-                          <td>
-                            <code className="debug-meta-code">{m.property || m.name || '—'}</code>
+                        <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '10px 16px', fontSize: 12, color: 'var(--primary-light)', fontFamily: 'monospace' }}>
+                            {m.property || m.name || '—'}
                           </td>
-                          <td className="debug-meta-td-content">{m.content || '—'}</td>
+                          <td style={{ padding: '10px 16px', fontSize: 12, color: 'var(--text-muted)', wordBreak: 'break-all' }}>
+                            {m.content || '—'}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

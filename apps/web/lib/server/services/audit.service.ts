@@ -5,7 +5,7 @@ import type { Prisma } from '@prisma-client'
 import { findOrCreateByDomain } from './project.service'
 import { findOrCreatePage } from './page.service'
 
-export async function ingestAudit(payload: AuditPayload, userId?: string) {
+export async function ingestAudit(payload: AuditPayload, userId?: string, source: 'EXTENSION' | 'MANUAL' | 'SCHEDULED' | 'API' = 'EXTENSION') {
   // 1. Find or create project by domain
   const project = await findOrCreateByDomain(payload.projectDomain, userId)
 
@@ -20,7 +20,7 @@ export async function ingestAudit(payload: AuditPayload, userId?: string) {
     data: {
       projectId: project.id,
       pageId: page.id,
-      source: 'EXTENSION',
+      source: source,
       url: payload.url,
       title: payload.extracted.title,
       overallScore: serverScore.overall,

@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ proj
       orderBy: { createdAt: 'desc' },
       select: {
         overallScore: true, onPageScore: true, technicalScore: true,
-        contentScore: true, performanceScore: true, createdAt: true,
+        contentScore: true, performanceScore: true, createdAt: true, url: true,
       },
     }),
     prisma.page.count({ where: { projectId } }),
@@ -36,6 +36,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ proj
       content: latestAudit.contentScore,
       performance: latestAudit.performanceScore,
       date: latestAudit.createdAt,
+      url: latestAudit.url,
     } : null,
     totalPages,
     totalAudits,

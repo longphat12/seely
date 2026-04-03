@@ -59,3 +59,18 @@ export async function saveAudit(payload: unknown) {
     { method: 'POST', body: JSON.stringify(payload) },
   )
 }
+
+export interface SavedPageItem {
+  pageId: string
+  projectId: string
+  projectName: string
+  projectDomain: string
+  normalizedUrl: string
+  path: string
+  lastSeenAt: string
+  latestAuditScore: number | null
+}
+
+export async function getRecentSavedPages() {
+  return apiFetch<SavedPageItem[]>('/api/pages/recent')
+}
