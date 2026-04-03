@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { apiFetch } from '@/hooks/api'
 
@@ -40,7 +40,7 @@ interface DebugResult {
 
 type Platform = 'facebook' | 'zalo' | 'twitter'
 
-export default function DebugSharingPage() {
+function DebugSharingPageContent() {
   const searchParams = useSearchParams()
   const [url, setUrl] = useState('')
   const [result, setResult] = useState<DebugResult | null>(null)
@@ -428,5 +428,13 @@ export default function DebugSharingPage() {
         </div>
       )}
     </>
+  )
+}
+
+export default function DebugSharingPage() {
+  return (
+    <Suspense fallback={<div className="debug-loading"><div className="debug-loading-pulse" /><p>Đang tải công cụ gỡ lỗi...</p></div>}>
+      <DebugSharingPageContent />
+    </Suspense>
   )
 }
